@@ -10,8 +10,8 @@ import '../../Custom Widgets/custom_text_field.dart';
 import '../../Custom Widgets/logo_text.dart';
 import '../../Models/patient_list_model.dart';
 import '../../Components/colors.dart';
-import '../PatientData/home_screen.dart';
 import 'create_account_screen.dart';
+import 'selection_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -198,7 +198,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               patientsProvider.setPatients(patientList.patients!);
 
                               navigatorKey.currentState?.pushNamedAndRemoveUntil(
-                                HomeScreen.routeName,
+                                SelectionScreen.routeName,
                                 (route) => false,
                               );
                             } else {

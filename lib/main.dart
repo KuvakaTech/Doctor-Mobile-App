@@ -12,7 +12,9 @@ import 'Models/patient_list_model.dart';
 import 'Screens/Authentication/create_account_screen.dart';
 import 'Screens/PatientData/home_screen.dart';
 import 'Screens/Consultation/review_responses_screen.dart';
+import 'Screens/Authentication/selection_screen.dart';
 import 'Screens/Authentication/welcome_screen.dart';
+import 'Screens/Kiosk/kiosk_flow_screen.dart';
 import 'Services/Authentication/auth_service.dart';
 import 'Services/Authentication/navigation_service.dart';
 import 'Services/Authentication/access_token.dart';
@@ -114,6 +116,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         CreateAccountScreen.routeName: (context) => CreateAccountScreen(),
         LoginScreen.routeName: (context) => LoginScreen(),
         HomeScreen.routeName: (context) => HomeScreen(),
+        SelectionScreen.routeName: (context) => SelectionScreen(),
+        KioskFlowScreen.routeName: (context) => KioskFlowScreen(),
         WelcomeScreen.routeName: (context) => WelcomeScreen(),
         AuthGate.routeName: (context) => AuthGate(),
         ReviewResponsesScreen.routeName: (context) =>
@@ -165,7 +169,7 @@ class _AuthGateState extends State<AuthGate> {
 
       if (token != null) {
         // 4. Navigate immediately to HomeScreen.
-        _goTo(const HomeScreen());
+        _goTo(const SelectionScreen());
       } else {
         // Refresh failed and we have no valid token
         await AccessTokenService.clear();

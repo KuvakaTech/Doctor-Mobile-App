@@ -11,7 +11,7 @@ import '../../Models/patient_list_model.dart';
 import '../../Services/Authentication/navigation_service.dart';
 import '../../Services/PatientData/patient_service.dart';
 import '../../Components/colors.dart';
-import '../PatientData/home_screen.dart';
+import 'selection_screen.dart';
 import 'package:provider/provider.dart';
 
 class CreateAccountScreen extends StatefulWidget {
@@ -216,7 +216,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                               
                               if (!context.mounted) return;
                               navigatorKey.currentState?.pushNamedAndRemoveUntil(
-                                HomeScreen.routeName,
+                                SelectionScreen.routeName,
                                 (route) => false,
                               );
                             } else {

@@ -1,3 +1,5 @@
+import "dart:convert";
+
 String getInitials(String name) {
   final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
 
@@ -84,4 +86,25 @@ String toTitleCase(String text) {
           ? word
           : '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}')
       .join(' ');
+}
+Map<String, dynamic> decodeJwt(String token) {
+  // 1. Split the token into its 3 parts (Header.Payload.Signature)
+  final parts = token.split('.');
+
+  if (parts.length != 3) {
+    throw Exception('Invalid JWT format');
+  }
+
+  // 2. Grab the Payload (the 2nd part)
+  String payload = parts[1];
+
+  // 3. Base64Url requires padding to be a multiple of 4.
+  // Sometimes JWTs drop the padding ('=' characters), so we need to add it back.
+  String normalizedPayload = base64Url.normalize(payload);
+
+  // 4. Decode the Base64Url string into raw bytes, then into a UTF-8 String
+  String decodedString = utf8.decode(base64Url.decode(normalizedPayload));
+
+  // 5. Parse the JSON string into a Dart Map
+  return jsonDecode(decodedString);
 }
