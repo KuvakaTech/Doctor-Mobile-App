@@ -1,18 +1,12 @@
-import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
-import 'package:record/record.dart';
-import 'package:audioplayers/audioplayers.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:clinical_ai_app/Components/colors.dart';
 import 'package:clinical_ai_app/Components/layout_constants.dart';
 import 'package:clinical_ai_app/Custom Widgets/custom_button.dart';
-import 'package:clinical_ai_app/Models/kiosk_voice_events.dart';
-import 'package:clinical_ai_app/Models/kiosk_voice_socket.dart';
-import 'package:clinical_ai_app/Services/Kiosk/kiosk_service.dart';
+import 'package:clinical_ai_app/Services/Kiosk/kiosk_consultation_service.dart';
 
-class KioskConsultationScreen extends StatefulWidget {
+class KioskConsultationScreen extends ConsumerWidget {
   const KioskConsultationScreen({
     super.key,
     required this.slug,
@@ -27,213 +21,18 @@ class KioskConsultationScreen extends StatefulWidget {
   final String kioskToken;
 
   @override
-  State<KioskConsultationScreen> createState() => _KioskConsultationScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final params = KioskConsultationParams(
+      slug: slug,
+      sessionId: sessionId,
+      kioskToken: kioskToken,
+    );
+    final state = ref.watch(kioskConsultationServiceProvider(params));
+    final service = ref.read(kioskConsultationServiceProvider(params).notifier);
 
-class _KioskConsultationScreenState extends State<KioskConsultationScreen> {
-  KioskVoiceConnection? _connection;
-  StreamSubscription<KioskVoiceMessage>? _sub;
-  final AudioRecorder _recorder = AudioRecorder();
-  final AudioPlayer _audioPlayer = AudioPlayer();
-  StreamSubscription<Uint8List>? _audioStreamSub;
-  StreamSubscription<Amplitude>? _amplitudeSub;
-
-  bool _isRecording = false;
-  File? _currentAudioFile;
-
-  String _currentPhase = "Connecting...";
-  String _agentText = "Waiting for agent...";
-  String _userTranscript = "";
-  String? _categoryLabel;
-  ResultReadyEvent? _resultReadyEvent;
-
-  final _recordConfig = const RecordConfig(
-    encoder: AudioEncoder.pcm16bits,
-    sampleRate: 16000,
-    numChannels: 1,
-  );
-
-  @override
-  void initState() {
-    super.initState();
-    _connectWebSocket();
-  }
-
-  @override
-  void dispose() {
-    _sub?.cancel();
-    _audioStreamSub?.cancel();
-    _amplitudeSub?.cancel();
-    _recorder.dispose();
-    _audioPlayer.dispose();
-    _connection?.close();
-    if (_currentAudioFile != null && _currentAudioFile!.existsSync()) {
-      _currentAudioFile!.deleteSync();
-    }
-    super.dispose();
-  }
-
-  void _connectWebSocket() {
-    try {
-      _connection = KioskService.connectVoice(
-        slug: widget.slug,
-        sessionId: widget.sessionId,
-        kioskToken: widget.kioskToken,
-      );
-
-      _sub = _connection!.messages.listen(
-        (msg) => _handleEvent(KioskVoiceEvent.fromJson(msg.data)),
-        onError: (err) {
-          setState(() {
-            _currentPhase = "Connection Error: $err";
-          });
-        },
-        onDone: () {
-          setState(() {
-            _currentPhase = "Session Ended";
-            _isRecording = false;
-          });
-        },
-      );
-
-      // Send initial start message per protocol
-      _connection!.start();
-    } catch (e) {
-      setState(() {
-        _currentPhase = "Failed to connect: $e";
-      });
-    }
-  }
-
-  void _handleEvent(KioskVoiceEvent event) async {
-    switch (event.type) {
-      case 'ready':
-        final ready = event as ReadyEvent;
-        setState(() {
-          _currentPhase = ready.phase ?? 'triage';
-        });
-        _startRecording();
-        break;
-
-      case 'triage_started':
-        setState(() => _currentPhase = "Triage Phase");
-        break;
-
-      case 'agent_speaking':
-        final agent = event as AgentSpeakingEvent;
-        if (agent.question != null) {
-          setState(() => _agentText = agent.question!);
-        }
-        break;
-
-      case 'agent_audio_chunk':
-        final chunk = event as AgentAudioChunkEvent;
-        if (chunk.audioB64 != null && chunk.audioB64!.isNotEmpty) {
-          try {
-            final bytes = base64Decode(chunk.audioB64!);
-            _playAgentAudioBytes(bytes);
-          } catch (e) {
-            debugPrint("Error handling agent audio chunk: $e");
-          }
-        }
-        break;
-
-      case 'user_speech_started':
-        setState(() => _userTranscript = "Listening...");
-        break;
-
-      case 'partial_transcript':
-        final pt = event as PartialTranscriptEvent;
-        if (pt.text != null) {
-          setState(() => _userTranscript = pt.text!);
-        }
-        break;
-
-      case 'category_identified':
-        final cat = event as CategoryIdentifiedEvent;
-        setState(() {
-          _categoryLabel = cat.category?.label ?? cat.category?.key;
-        });
-        break;
-
-      case 'consultation_started':
-        setState(() => _currentPhase = "Clinical Consultation");
-        break;
-
-      case 'silence_nudge':
-        // User was silent
-        break;
-
-      case 'consultation_ended':
-        setState(() => _currentPhase = "Consultation Concluded");
-        break;
-
-      case 'result_ready':
-        _resultReadyEvent = event as ResultReadyEvent;
-        setState(() => _currentPhase = "Result Ready");
-        _stopRecording();
-        break;
-
-      case 'ended':
-        _stopRecording();
-        setState(() => _currentPhase = "Ended");
-        break;
-
-      default:
-        break;
-    }
-  }
-
-  Future<void> _playAgentAudioBytes(Uint8List bytes) async {
-    try {
-      final dir = await getTemporaryDirectory();
-      final file = File(
-        '${dir.path}/kiosk_audio_${DateTime.now().millisecondsSinceEpoch}.pcm',
-      );
-      await file.writeAsBytes(bytes);
-
-      final previous = _currentAudioFile;
-      _currentAudioFile = file;
-      if (previous != null && await previous.exists()) {
-        await previous.delete();
-      }
-
-      await _audioPlayer.setVolume(1.0);
-      await _audioPlayer.play(DeviceFileSource(file.path));
-    } catch (e) {
-      debugPrint("Error playing agent audio chunk: $e");
-    }
-  }
-
-  Future<void> _startRecording() async {
-    if (await _recorder.hasPermission()) {
-      final stream = await _recorder.startStream(_recordConfig);
-      setState(() => _isRecording = true);
-
-      _audioStreamSub = stream.listen((chunk) {
-        _connection?.sendAudioChunk(chunk);
-      });
-
-      _amplitudeSub = _recorder
-          .onAmplitudeChanged(const Duration(milliseconds: 50))
-          .listen((amp) {
-        // Amplitude updates if needed
-      });
-    }
-  }
-
-  Future<void> _stopRecording() async {
-    await _audioStreamSub?.cancel();
-    await _amplitudeSub?.cancel();
-    await _recorder.stop();
-    setState(() => _isRecording = false);
-  }
-
-  @override
-  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Kiosk Consultation (${widget.sessionId.substring(0, 8)})"),
+        title: Text("Kiosk Consultation (${sessionId.substring(0, 8)})"),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -248,12 +47,12 @@ class _KioskConsultationScreenState extends State<KioskConsultationScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Chip(
-                    label: Text(_currentPhase.toUpperCase()),
+                    label: Text(state.currentPhase.toUpperCase()),
                     backgroundColor: Theme.of(context).colorScheme.primaryContainer,
                   ),
-                  if (_categoryLabel != null)
+                  if (state.categoryLabel != null)
                     Chip(
-                      label: Text("Category: $_categoryLabel"),
+                      label: Text("Category: ${state.categoryLabel}"),
                       backgroundColor: Colors.green.withAlpha(50),
                     ),
                 ],
@@ -281,14 +80,14 @@ class _KioskConsultationScreenState extends State<KioskConsultationScreen> {
                       ),
                       const Spacer(),
                       Text(
-                        _agentText,
+                        state.agentText,
                         style: Theme.of(context).textTheme.headlineSmall,
                       ),
                       const Spacer(),
-                      if (_userTranscript.isNotEmpty) ...[
+                      if (state.userTranscript.isNotEmpty) ...[
                         const Divider(),
                         Text(
-                          "Patient: $_userTranscript",
+                          "Patient: ${state.userTranscript}",
                           style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color),
                         ),
                       ],
@@ -299,25 +98,19 @@ class _KioskConsultationScreenState extends State<KioskConsultationScreen> {
 
               const SizedBox(height: AppLayout.space24),
 
-              // Mic Waveform Indicator
+              // Pulsating Mic Button with Amplitude Animation
               Center(
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: _isRecording ? Colors.red.withAlpha(25) : Colors.grey.withAlpha(25),
-                  ),
-                  child: Icon(
-                    _isRecording ? Icons.mic : Icons.mic_off,
-                    size: 36,
-                    color: _isRecording ? Colors.red : Colors.grey,
-                  ),
+                child: PulsatingMicButton(
+                  isRecording: state.isRecording,
+                  isConnecting: false,
+                  amplitude: state.currentAmplitude,
+                  onTap: () {},
                 ),
               ),
               const SizedBox(height: AppLayout.space24),
 
               // Result View if ready
-              if (_resultReadyEvent != null) ...[
+              if (state.resultReadyEvent != null) ...[
                 Card(
                   color: Colors.blue.withAlpha(25),
                   child: Padding(
@@ -327,7 +120,7 @@ class _KioskConsultationScreenState extends State<KioskConsultationScreen> {
                       children: [
                         const Text("Consultation Summary Ready", style: TextStyle(fontWeight: FontWeight.bold)),
                         const SizedBox(height: 8),
-                        Text(_resultReadyEvent!.summary ?? "No summary provided."),
+                        Text(state.resultReadyEvent!.summary ?? "No summary provided."),
                       ],
                     ),
                   ),
@@ -338,13 +131,136 @@ class _KioskConsultationScreenState extends State<KioskConsultationScreen> {
               CustomButton(
                 text: "End Session & Return",
                 onTap: () {
-                  _stopRecording();
-                  _connection?.close();
+                  service.endSessionAndClose();
                   Navigator.pop(context);
                 },
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class PulsatingMicButton extends StatefulWidget {
+  final bool isRecording;
+  final bool isConnecting;
+  final double amplitude;
+  final VoidCallback onTap;
+  final double size;
+
+  const PulsatingMicButton({
+    super.key,
+    required this.isRecording,
+    required this.isConnecting,
+    required this.amplitude,
+    required this.onTap,
+    this.size = 65.0,
+  });
+
+  @override
+  State<PulsatingMicButton> createState() => _PulsatingMicButtonState();
+}
+
+class _PulsatingMicButtonState extends State<PulsatingMicButton>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+    if (widget.isRecording) _controller.repeat();
+  }
+
+  @override
+  void didUpdateWidget(PulsatingMicButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isRecording != oldWidget.isRecording) {
+      if (widget.isRecording) {
+        _controller.repeat();
+      } else {
+        _controller.stop();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final double volumeFactor = ((widget.amplitude + 50) / 40).clamp(0.0, 1.0);
+
+    return SizedBox(
+      width: widget.size * 2,
+      height: widget.size * 2,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Stack(
+          alignment: Alignment.center,
+          clipBehavior: Clip.none,
+          children: [
+            if (widget.isRecording)
+              ...List.generate(3, (index) {
+                return AnimatedBuilder(
+                  animation: _controller,
+                  builder: (context, child) {
+                    final double progress =
+                        (_controller.value + (index / 3)) % 1.0;
+                    final double spread =
+                        progress * (widget.size * 0.9) * volumeFactor;
+                    final double opacity = (1.0 - progress) * volumeFactor;
+
+                    return Container(
+                      width: widget.size + spread,
+                      height: widget.size + spread,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color:
+                            AppColors.error.withAlpha((180 * opacity).toInt()),
+                      ),
+                    );
+                  },
+                );
+              }),
+            Container(
+              width: widget.size,
+              height: widget.size,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: widget.isRecording ? AppColors.error : AppColors.brand,
+                boxShadow: [
+                  BoxShadow(
+                    color: (widget.isRecording ? AppColors.error : AppColors.brand)
+                        .withAlpha((100 * volumeFactor).toInt().clamp(20, 100)),
+                    blurRadius: (widget.size / 6) + (volumeFactor * 10),
+                    spreadRadius: 1 + (volumeFactor * 4),
+                  ),
+                ],
+              ),
+              child: widget.isConnecting
+                  ? Padding(
+                      padding: EdgeInsets.all(widget.size * 0.25),
+                      child: const CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Icon(
+                      widget.isRecording ? LucideIcons.square : LucideIcons.mic,
+                      color: AppColors.surface,
+                      size: widget.size * 0.43,
+                    ),
+            ),
+          ],
         ),
       ),
     );
