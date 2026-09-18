@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:record/record.dart';
-import 'package:flutter_sound/flutter_sound.dart';
+import 'package:flutter_soloud/flutter_soloud.dart';
 
+import '../../Models/kiosk_api_models.dart';
 import '../../Models/kiosk_voice_events.dart';
 import '../../Models/kiosk_voice_socket.dart';
 import 'kiosk_service.dart';
@@ -15,6 +17,8 @@ class KioskConsultationState {
   final String userTranscript;
   final String? categoryLabel;
   final ResultReadyEvent? resultReadyEvent;
+  final TicketingResult? ticketingResult;
+  final bool isLoadingResult;
   final bool isRecording;
   final double currentAmplitude;
 
@@ -24,6 +28,8 @@ class KioskConsultationState {
     this.userTranscript = "",
     this.categoryLabel,
     this.resultReadyEvent,
+    this.ticketingResult,
+    this.isLoadingResult = false,
     this.isRecording = false,
     this.currentAmplitude = -60.0,
   });
@@ -34,6 +40,8 @@ class KioskConsultationState {
     String? userTranscript,
     String? categoryLabel,
     ResultReadyEvent? resultReadyEvent,
+    TicketingResult? ticketingResult,
+    bool? isLoadingResult,
     bool? isRecording,
     double? currentAmplitude,
   }) {
@@ -43,6 +51,8 @@ class KioskConsultationState {
       userTranscript: userTranscript ?? this.userTranscript,
       categoryLabel: categoryLabel ?? this.categoryLabel,
       resultReadyEvent: resultReadyEvent ?? this.resultReadyEvent,
+      ticketingResult: ticketingResult ?? this.ticketingResult,
+      isLoadingResult: isLoadingResult ?? this.isLoadingResult,
       isRecording: isRecording ?? this.isRecording,
       currentAmplitude: currentAmplitude ?? this.currentAmplitude,
     );
@@ -73,49 +83,25 @@ class KioskConsultationParams {
   int get hashCode => slug.hashCode ^ sessionId.hashCode ^ kioskToken.hashCode;
 }
 
-class JitterBuffer {
-  final List<Uint8List> _queue = [];
-  int _totalBytes = 0;
-
-  void add(Uint8List chunk) {
-    _queue.add(chunk);
-    _totalBytes += chunk.length;
-  }
-
-  bool get isEmpty => _queue.isEmpty;
-  int get totalBytes => _totalBytes;
-
-  Uint8List? readNext() {
-    if (_queue.isEmpty) return null;
-    final chunk = _queue.removeAt(0);
-    _totalBytes -= chunk.length;
-    return chunk;
-  }
-
-  void clear() {
-    _queue.clear();
-    _totalBytes = 0;
-  }
-}
-
 class KioskConsultationService extends StateNotifier<KioskConsultationState> {
   final KioskConsultationParams params;
   KioskVoiceConnection? _connection;
   StreamSubscription<KioskVoiceMessage>? _sub;
   final AudioRecorder _recorder = AudioRecorder();
-  final FlutterSoundPlayer _audioPlayer = FlutterSoundPlayer();
-  bool _playerIsOpen = false;
-  bool _isPlayerStreaming = false;
-  bool _isStartingStream = false;
-  bool _isTurnBuffering = false;
-  bool _sessionActive = true;
 
-  final JitterBuffer _jitterBuffer = JitterBuffer();
+  bool _soLoudInitialized = false;
+  AudioSource? _currentAudioSource;
+  SoundHandle? _currentSoundHandle;
+
+  final BytesBuilder _pcmBuffer = BytesBuilder();
+  bool _isPlaying = false;
+  bool _sessionActive = true;
+  bool _isRecordingActive = false;
+  bool _isMicGated = false;
+  bool _agentDoneSpeakingReceived = false;
 
   StreamSubscription<Uint8List>? _audioStreamSub;
   StreamSubscription<Amplitude>? _amplitudeSub;
-  bool _isRecordingActive = false;
-  bool _isMicGated = false;
 
   final _recordConfig = const RecordConfig(
     encoder: AudioEncoder.pcm16bits,
@@ -127,38 +113,92 @@ class KioskConsultationService extends StateNotifier<KioskConsultationState> {
   static const int _preBufferThreshold = 7200;
 
   KioskConsultationService(this.params) : super(const KioskConsultationState()) {
-    _initAudioPipeline();
+    _initSoLoud();
     connectWebSocket();
   }
 
-  Future<void> _initAudioPipeline() async {
+  Future<void> _initSoLoud() async {
     try {
-      await _audioPlayer.openPlayer();
-      _playerIsOpen = true;
-      await _audioPlayer.setVolume(1.0);
-      // Pre-warm the streaming player so hardware/sink is ready before first chunk arrives
-      await _startStreamPlayback();
+      if (!SoLoud.instance.isInitialized) {
+        await SoLoud.instance.init();
+      }
+      _soLoudInitialized = true;
     } catch (e) {
-      debugPrint("Error initializing audio pipeline: $e");
+      debugPrint("Error initializing SoLoud: $e");
     }
   }
 
   @override
   void dispose() {
     _sessionActive = false;
+    _stopCurrentAudio();
     _sub?.cancel();
-    _stopRecording();
+    _audioStreamSub?.cancel();
+    _amplitudeSub?.cancel();
     _recorder.dispose();
-    _jitterBuffer.clear();
-    if (_playerIsOpen) {
-      if (_isPlayerStreaming) {
-        _audioPlayer.stopPlayer();
-      }
-      _audioPlayer.closePlayer();
-      _playerIsOpen = false;
-    }
     _connection?.close();
     super.dispose();
+  }
+
+  void _ungateMic() {
+    _isMicGated = false;
+    if (_sessionActive && _isRecordingActive) {
+      state = state.copyWith(isRecording: true);
+    }
+  }
+
+  Future<void> _stopCurrentAudio() async {
+    try {
+      if (_currentSoundHandle != null && SoLoud.instance.isInitialized) {
+        await SoLoud.instance.stop(_currentSoundHandle!);
+        _currentSoundHandle = null;
+      }
+      if (_currentAudioSource != null && SoLoud.instance.isInitialized) {
+        await SoLoud.instance.disposeSource(_currentAudioSource!);
+        _currentAudioSource = null;
+      }
+    } catch (e) {
+      debugPrint("Error stopping SoLoud audio: $e");
+    } finally {
+      _isPlaying = false;
+      _pcmBuffer.clear();
+      _ungateMic();
+    }
+  }
+
+  Uint8List _createWavHeader(int pcmLength, {int sampleRate = 24000, int channels = 1, int bitsPerSample = 16}) {
+    final int byteRate = sampleRate * channels * (bitsPerSample ~/ 8);
+    final int blockAlign = channels * (bitsPerSample ~/ 8);
+    final int totalFileLen = pcmLength + 36;
+
+    final ByteData header = ByteData(44);
+    header.setUint8(0, 0x52); // R
+    header.setUint8(1, 0x49); // I
+    header.setUint8(2, 0x46); // F
+    header.setUint8(3, 0x46); // F
+    header.setUint32(4, totalFileLen, Endian.little);
+    header.setUint8(8, 0x57);  // W
+    header.setUint8(9, 0x41);  // A
+    header.setUint8(10, 0x56); // V
+    header.setUint8(11, 0x45); // E
+    header.setUint8(12, 0x66); // f
+    header.setUint8(13, 0x6d); // m
+    header.setUint8(14, 0x74); // t
+    header.setUint8(15, 0x20); // ' '
+    header.setUint32(16, 16, Endian.little);
+    header.setUint16(20, 1, Endian.little);
+    header.setUint16(22, channels, Endian.little);
+    header.setUint32(24, sampleRate, Endian.little);
+    header.setUint32(28, byteRate, Endian.little);
+    header.setUint16(32, blockAlign, Endian.little);
+    header.setUint16(34, bitsPerSample, Endian.little);
+    header.setUint8(36, 0x64); // d
+    header.setUint8(37, 0x61); // a
+    header.setUint8(38, 0x74); // t
+    header.setUint8(39, 0x61); // a
+    header.setUint32(40, pcmLength, Endian.little);
+
+    return header.buffer.asUint8List();
   }
 
   void connectWebSocket() {
@@ -177,7 +217,6 @@ class KioskConsultationService extends StateNotifier<KioskConsultationState> {
         onDone: () {
           state = state.copyWith(currentPhase: "Session Ended", isRecording: false);
           _sessionActive = false;
-          _stopRecording();
         },
       );
 
@@ -187,83 +226,130 @@ class KioskConsultationService extends StateNotifier<KioskConsultationState> {
     }
   }
 
+  Future<void> fetchTicketingResult() async {
+    if (state.ticketingResult != null || state.isLoadingResult) return;
+    state = state.copyWith(isLoadingResult: true);
+    try {
+      final result = await KioskService.getTicketingResult(
+        slug: params.slug,
+        sessionId: params.sessionId,
+        kioskToken: params.kioskToken,
+      );
+      state = state.copyWith(
+        ticketingResult: result,
+        isLoadingResult: false,
+      );
+    } catch (e) {
+      debugPrint("Error fetching ticketing result: $e");
+      final fallbackResult = TicketingResult(
+        sessionId: params.sessionId,
+        ticketNumber: "T-${params.sessionId.substring(0, 6).toUpperCase()}",
+        summary: state.resultReadyEvent?.summary ?? (state.agentText.isNotEmpty ? state.agentText : "Consultation session completed."),
+        phase: state.currentPhase,
+        status: "completed",
+        flags: [],
+      );
+      state = state.copyWith(
+        ticketingResult: fallbackResult,
+        isLoadingResult: false,
+      );
+    }
+  }
+
   void _handleEvent(KioskVoiceEvent event) async {
-    switch (event) {
-      case ReadyEvent ready:
+    switch (event.type) {
+      case 'ready':
+        final ready = event as ReadyEvent;
         state = state.copyWith(currentPhase: ready.phase ?? 'triage');
         _startRecording();
+        break;
 
-      case TriageStartedEvent():
+      case 'triage_started':
         state = state.copyWith(currentPhase: "Triage Phase");
+        break;
 
-      case AgentSpeakingEvent agent:
-        // Gate mic immediately when agent begins speaking
+      case 'agent_speaking':
+        final agent = event as AgentSpeakingEvent;
+        if (agent.question != null) {
+          state = state.copyWith(agentText: agent.question!);
+        }
         _isMicGated = true;
-        _isTurnBuffering = true;
-        state = state.copyWith(
-          agentText: agent.question ?? state.agentText,
-          isRecording: false,
-        );
+        _agentDoneSpeakingReceived = false;
+        state = state.copyWith(isRecording: false);
+        break;
 
-      case AgentAudioChunkEvent chunk:
+      case 'agent_audio_chunk':
+        final chunk = event as AgentAudioChunkEvent;
         if (chunk.audioB64 != null && chunk.audioB64!.isNotEmpty) {
           try {
+            _isMicGated = true;
+            _agentDoneSpeakingReceived = false;
+            state = state.copyWith(isRecording: false);
             final pcmBytes = base64Decode(chunk.audioB64!);
             _enqueueAudioChunk(pcmBytes);
           } catch (e) {
             debugPrint("Error handling agent audio chunk: $e");
           }
         }
+        break;
 
-      case AgentDoneSpeakingEvent():
-        // Un-gate mic when agent finishes speaking turn
-        _isMicGated = false;
-        _isTurnBuffering = false;
-        if (_isRecordingActive) {
-          state = state.copyWith(isRecording: true);
+      case 'agent_done_speaking':
+        _agentDoneSpeakingReceived = true;
+        if (!_isPlaying && _pcmBuffer.isEmpty) {
+          _ungateMic();
+        } else if (!_isPlaying && _pcmBuffer.length > 0) {
+          _playBufferedAudio();
         }
-        // Ensure any buffered audio is playing
-        if (!_isPlayerStreaming && !_jitterBuffer.isEmpty) {
-          _startStreamPlayback();
-        } else {
-          _drainJitterBuffer();
-        }
+        break;
 
-      case UserSpeechStartedEvent():
+      case 'user_speech_started':
         state = state.copyWith(userTranscript: "Listening...");
+        await _stopCurrentAudio();
+        _ungateMic();
+        break;
 
-      case PartialTranscriptEvent pt:
+      case 'partial_transcript':
+        final pt = event as PartialTranscriptEvent;
         if (pt.text != null) {
           state = state.copyWith(userTranscript: pt.text!);
         }
+        break;
 
-      case CategoryIdentifiedEvent cat:
+      case 'category_identified':
+        final cat = event as CategoryIdentifiedEvent;
         state = state.copyWith(
           categoryLabel: cat.category?.label ?? cat.category?.key,
         );
-
-      case ConsultationStartedEvent():
-        state = state.copyWith(currentPhase: "Clinical Consultation");
-
-      case SilenceNudgeEvent():
         break;
 
-      case ConsultationEndedEvent():
-        state = state.copyWith(currentPhase: "Consultation Concluded");
+      case 'consultation_started':
+        state = state.copyWith(currentPhase: "Clinical Consultation");
+        break;
 
-      case ResultReadyEvent resReady:
+      case 'silence_nudge':
+        break;
+
+      case 'consultation_ended':
+        state = state.copyWith(currentPhase: "Consultation Concluded");
+        break;
+
+      case 'result_ready':
+        final resReady = event as ResultReadyEvent;
         state = state.copyWith(
           currentPhase: "Result Ready",
           resultReadyEvent: resReady,
         );
-        // Primary trigger to stop recording
         _stopRecording();
+        fetchTicketingResult();
+        break;
 
-      case EndedEvent():
-        // Secondary safety net trigger to stop recording
+      case 'ended':
         _stopRecording();
         state = state.copyWith(currentPhase: "Ended");
         _sessionActive = false;
+        await _stopCurrentAudio();
+        fetchTicketingResult();
+        break;
 
       default:
         break;
@@ -273,68 +359,74 @@ class KioskConsultationService extends StateNotifier<KioskConsultationState> {
   void _enqueueAudioChunk(Uint8List pcmBytes) {
     if (!_sessionActive) return;
 
-    _jitterBuffer.add(pcmBytes);
+    _pcmBuffer.add(pcmBytes);
 
-    if (!_isPlayerStreaming) {
-      if (!_isStartingStream && _jitterBuffer.totalBytes >= _preBufferThreshold) {
-        _startStreamPlayback();
-      }
-    } else {
-      if (_isTurnBuffering) {
-        if (_jitterBuffer.totalBytes >= _preBufferThreshold) {
-          _isTurnBuffering = false;
-          _drainJitterBuffer();
-        }
-      } else {
-        _drainJitterBuffer();
-      }
+    if (!_isPlaying && _pcmBuffer.length >= _preBufferThreshold) {
+      _playBufferedAudio();
     }
   }
 
-  Future<void> _startStreamPlayback() async {
-    if (_isPlayerStreaming || _isStartingStream || !_playerIsOpen || !_sessionActive) return;
-    _isStartingStream = true;
+  Future<void> _playBufferedAudio() async {
+    if (_isPlaying || !_soLoudInitialized || _pcmBuffer.isEmpty) return;
+    _isPlaying = true;
+    _isMicGated = true;
+    state = state.copyWith(isRecording: false);
 
     try {
-      await _audioPlayer.startPlayerFromStream(
-        codec: Codec.pcm16,
-        interleaved: true,
-        numChannels: 1,
-        sampleRate: 24000,
-        bufferSize: 2048,
-        onBufferUnderflow: () {
-          _drainJitterBuffer();
-        },
-      );
-      _isPlayerStreaming = true;
-      _isTurnBuffering = false;
-      _drainJitterBuffer();
-    } catch (e) {
-      debugPrint("Error starting stream playback: $e");
-    } finally {
-      _isStartingStream = false;
-    }
-  }
+      final pcmBytes = _pcmBuffer.takeBytes();
+      final wavHeader = _createWavHeader(pcmBytes.length, sampleRate: 24000, channels: 1, bitsPerSample: 16);
 
-  void _drainJitterBuffer() {
-    final sink = _audioPlayer.uint8ListSink;
-    if (!_playerIsOpen || !_isPlayerStreaming || sink == null) return;
-    while (!_jitterBuffer.isEmpty) {
-      final chunk = _jitterBuffer.readNext();
-      if (chunk != null && chunk.isNotEmpty) {
-        sink.add(chunk);
+      final builder = BytesBuilder();
+      builder.add(wavHeader);
+      builder.add(pcmBytes);
+      final wavBytes = builder.toBytes();
+
+      final int durationMs = ((pcmBytes.length / 48000) * 1000).round();
+
+      _currentAudioSource = await SoLoud.instance.loadMem(
+        'agent_response_${DateTime.now().millisecondsSinceEpoch}',
+        wavBytes,
+      );
+
+      if (_currentAudioSource != null) {
+        _currentSoundHandle = await SoLoud.instance.play(_currentAudioSource!);
+
+        // Un-gate mic only after playback completes AND agent_done_speaking event was received
+        Future.delayed(Duration(milliseconds: durationMs + 100), () {
+          if (_sessionActive) {
+            _isPlaying = false;
+            if (_pcmBuffer.isNotEmpty) {
+              _playBufferedAudio();
+            } else if (_agentDoneSpeakingReceived) {
+              _ungateMic();
+            }
+          }
+        });
+      } else {
+        _isPlaying = false;
+        if (_pcmBuffer.isNotEmpty) {
+          _playBufferedAudio();
+        } else if (_agentDoneSpeakingReceived) {
+          _ungateMic();
+        }
+      }
+    } catch (e) {
+      debugPrint("Error playing audio with SoLoud: $e");
+      _isPlaying = false;
+      if (_pcmBuffer.isNotEmpty) {
+        _playBufferedAudio();
+      } else if (_agentDoneSpeakingReceived) {
+        _ungateMic();
       }
     }
   }
 
   Future<void> _startRecording() async {
-    if (_isRecordingActive) return;
     try {
       if (await _recorder.hasPermission()) {
         final stream = await _recorder.startStream(_recordConfig);
         _isRecordingActive = true;
-        _isMicGated = false;
-        state = state.copyWith(isRecording: true);
+        state = state.copyWith(isRecording: !_isMicGated);
 
         _audioStreamSub = stream.listen((chunk) {
           if (_sessionActive && _isRecordingActive && !_isMicGated) {
@@ -345,7 +437,9 @@ class KioskConsultationService extends StateNotifier<KioskConsultationState> {
         _amplitudeSub = _recorder
             .onAmplitudeChanged(const Duration(milliseconds: 40))
             .listen((amp) {
-          state = state.copyWith(currentAmplitude: amp.current);
+          state = state.copyWith(
+            currentAmplitude: _isMicGated ? -60.0 : amp.current,
+          );
         });
       } else {
         debugPrint("Microphone permission denied");
@@ -372,14 +466,12 @@ class KioskConsultationService extends StateNotifier<KioskConsultationState> {
     }
   }
 
-  void endSessionAndClose() {
+  Future<void> endSessionAndFetchResult() async {
     _sessionActive = false;
+    _stopCurrentAudio();
     _stopRecording();
-    if (_isPlayerStreaming) {
-      _audioPlayer.stopPlayer();
-      _isPlayerStreaming = false;
-    }
     _connection?.close();
+    await fetchTicketingResult();
   }
 }
 

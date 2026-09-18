@@ -5,6 +5,7 @@ import 'package:clinical_ai_app/Components/colors.dart';
 import 'package:clinical_ai_app/Components/layout_constants.dart';
 import 'package:clinical_ai_app/Custom Widgets/custom_button.dart';
 import 'package:clinical_ai_app/Services/Kiosk/kiosk_consultation_service.dart';
+import 'package:clinical_ai_app/Screens/Kiosk/kiosk_result_screen.dart';
 
 class KioskConsultationScreen extends ConsumerWidget {
   const KioskConsultationScreen({
@@ -29,6 +30,18 @@ class KioskConsultationScreen extends ConsumerWidget {
     );
     final state = ref.watch(kioskConsultationServiceProvider(params));
     final service = ref.read(kioskConsultationServiceProvider(params).notifier);
+
+    // Automatically navigate to KioskResultScreen when ticketing result is fetched
+    ref.listen(kioskConsultationServiceProvider(params), (previous, next) {
+      if (next.ticketingResult != null && previous?.ticketingResult == null) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => KioskResultScreen(result: next.ticketingResult!),
+          ),
+        );
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(
@@ -102,7 +115,7 @@ class KioskConsultationScreen extends ConsumerWidget {
               Center(
                 child: PulsatingMicButton(
                   isRecording: state.isRecording,
-                  isConnecting: false,
+                  isConnecting: state.isLoadingResult,
                   amplitude: state.currentAmplitude,
                   onTap: () {},
                 ),
@@ -129,10 +142,12 @@ class KioskConsultationScreen extends ConsumerWidget {
               ],
 
               CustomButton(
-                text: "End Session & Return",
-                onTap: () {
-                  service.endSessionAndClose();
-                  Navigator.pop(context);
+                text: state.isLoadingResult ? "Fetching Result..." : "End Session & View Result",
+                onTap: () async {
+                  await service.endSessionAndFetchResult();
+                  if (context.mounted && ref.read(kioskConsultationServiceProvider(params)).ticketingResult == null) {
+                    Navigator.pop(context);
+                  }
                 },
               ),
             ],
@@ -223,7 +238,8 @@ class _PulsatingMicButtonState extends State<PulsatingMicButton>
                       width: widget.size + spread,
                       height: widget.size + spread,
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
+                        shape:
+                            BoxShape.circle,
                         color:
                             AppColors.error.withAlpha((180 * opacity).toInt()),
                       ),

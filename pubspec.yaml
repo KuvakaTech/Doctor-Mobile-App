@@ -27,6 +27,7 @@ dependencies:
   web_socket_channel:
   audioplayers:
   flutter_sound: ^9.2.13
+  flutter_soloud: ^2.0.0
   flutter_launcher_icons: ^0.14.4
   # PDF generation and file handling
   pdf: ^3.11.1
