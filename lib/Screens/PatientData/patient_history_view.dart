@@ -20,6 +20,7 @@ import '../../Services/PatientData/patient_service.dart';
 import '../../functions.dart';
 import '../Consultation/new_cabin_consultation_screen.dart';
 import '../Consultation/new_consultation_screen.dart';
+import '../Consultation/audio_recording_screen.dart';
 import 'package:open_file/open_file.dart';
 
 class PatientHistoryIconText extends StatelessWidget {
@@ -242,7 +243,7 @@ class _PatientClinicalHistoryViewState extends State<PatientClinicalHistoryView>
 
         final sessionIdsToDelete = List.from(_selectedSessionIds);
         final cabinIdsToDelete = List.from(_selectedCabinIds);
-        
+
         try {
           setState(() {
             history.sessions.removeWhere((s) => sessionIdsToDelete.contains(s.sessionId));
@@ -413,37 +414,301 @@ class _PatientClinicalHistoryViewState extends State<PatientClinicalHistoryView>
                 );
               },
             ),
+            const Divider(),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.brandHighlight,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(LucideIcons.mic, color: AppColors.brand, size: 20),
+              ),
+              title: const Text("Audio Recording"),
+              subtitle: const Text("Record audio consultation session"),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => AudioRecordingScreen(
+                      patientId: history.patient.patientId,
+                      patientName: history.patient.name,
+                    ),
+                  ),
+                );
+              },
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildPageIndicator(int index, String label, IconData icon) {
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: AppLayout.space16),
+                child: Material(
+                  borderRadius: BorderRadius.circular(AppLayout.radius16),
+                  color: theme.colorScheme.surface,
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppLayout.space16),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CustomNameInitial(name: history.patient.name, size: 60),
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: AppLayout.space8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  history.patient.name,
+                                  style: theme.textTheme.headlineMedium,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  "${history.patient.age} Yrs · ${history.patient.gender ?? ""}",
+                                  style: theme.textTheme.bodyMedium,
+                                ),
+                                const SizedBox(height: AppLayout.space8),
+                                Wrap(
+                                  spacing: AppLayout.space8,
+                                  children: [
+                                    PatientHistoryIconText(
+                                      icon: LucideIcons.calendar,
+                                      text: DateFormat('d MMM yy').format(
+                                        parseServerDate(history.patient.createdAt),
+                                      ),
+                                    ),
+                                    PatientHistoryIconText(
+                                      icon: LucideIcons.stethoscope,
+                                      text: '${history.sessions.length + history.cabinSessions.length} Sessions',
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppLayout.space16),
+
+              // Page Selector or Selection Bar
+              SizedBox(
+                height: 44,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: (_selectedSessionIds.isNotEmpty || _selectedCabinIds.isNotEmpty)
+                          ? Container(
+                              key: const ValueKey('selection_bar'),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppLayout.space12,
+                                vertical: AppLayout.space8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primaryContainer,
+                                borderRadius: BorderRadius.circular(AppLayout.radius20),
+                                border: Border.all(
+                                  color: theme.colorScheme.primary,
+                                  width: AppLayout.borderThin + 0.25,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  InkWell(
+                                    onTap: () => setState(() {
+                                      _selectedSessionIds.clear();
+                                      _selectedCabinIds.clear();
+                                    }),
+                                    child: Icon(
+                                      Icons.close,
+                                      size: AppLayout.iconSmall,
+                                      color: theme.colorScheme.onSurface,
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppLayout.space8),
+                                  Text(
+                                    "${_selectedSessionIds.length + _selectedCabinIds.length} Selected",
+                                    style: TextStyle(
+                                      color: theme.colorScheme.onSurface,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppLayout.space16),
+                                  if (_isBulkDeleting)
+                                    const SizedBox(
+                                      width: 14,
+                                      height: 14,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: AppLayout.borderThick,
+                                      ),
+                                    )
+                                  else
+                                    InkWell(
+                                      onTap: _deleteSelectedSessions,
+                                      child: const Icon(
+                                        LucideIcons.trash2,
+                                        color: AppColors.error,
+                                        size: AppLayout.iconSmall,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            )
+                          : Row(
+                              key: const ValueKey('page_selector'),
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                HistoryPageIndicator(
+                                  index: 0,
+                                  label: "History",
+                                  icon: LucideIcons.history,
+                                  isActive: _currentPage == 0,
+                                  onTap: () {
+                                    _pageController.animateToPage(
+                                      0,
+                                      duration: const Duration(milliseconds: 300),
+                                      curve: Curves.easeInOut,
+                                    );
+                                  },
+                                ),
+                                const SizedBox(width: AppLayout.space16),
+                                HistoryPageIndicator(
+                                  index: 1,
+                                  label: "Cabin",
+                                  icon: LucideIcons.monitor,
+                                  isActive: _currentPage == 1,
+                                  onTap: () {
+                                    _pageController.animateToPage(
+                                      1,
+                                      duration: const Duration(milliseconds: 300),
+                                      curve: Curves.easeInOut,
+                                    );
+                                  },
+                                ),
+                                if (MediaQuery.of(context).size.width > 800) ...[
+                                  const SizedBox(width: AppLayout.space16),
+                                  InkWell(
+                                    onTap: _showConsultationTypeDialog,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(AppLayout.space8),
+                                      decoration: BoxDecoration(
+                                        color: theme.colorScheme.primary,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        Icons.add,
+                                        color: theme.colorScheme.onPrimary,
+                                        size: AppLayout.iconSmall,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppLayout.space16),
+
+              Expanded(
+                child: PageView(
+                  controller: _pageController,
+                  onPageChanged: (index) {
+                    setState(() {
+                      _currentPage = index;
+                    });
+                  },
+                  children: [
+                    ConsultationHistoryPage(
+                      history: history,
+                      selectedSessionIds: _selectedSessionIds,
+                      selectedCabinIds: _selectedCabinIds,
+                      downloadingSessionId: downloadingSessionId,
+                      sessionLocations: sessionLocations,
+                      onRefreshHistory: _refreshHistory,
+                      onToggleSessionSelection: _toggleSessionSelection,
+                      onDeleteSession: _deleteSession,
+                      onDownloadConsultationReport: downloadConsultationReport,
+                    ),
+                    CabinHistoryPage(
+                      history: history,
+                      selectedSessionIds: _selectedSessionIds,
+                      selectedCabinIds: _selectedCabinIds,
+                      onRefreshHistory: _refreshHistory,
+                      onToggleCabinSelection: _toggleCabinSelection,
+                      onDeleteCabinSession: _deleteCabinSession,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class HistoryPageIndicator extends StatelessWidget {
+  final int index;
+  final String label;
+  final IconData icon;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const HistoryPageIndicator({
+    super.key,
+    required this.index,
+    required this.label,
+    required this.icon,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    bool isActive = _currentPage == index;
-    
+
     final activeBg = theme.colorScheme.primary;
     final activeFg = theme.colorScheme.onPrimary;
-    
+
     final inactiveFg = theme.colorScheme.onSurface;
     final inactiveBg = theme.colorScheme.surface;
-    final borderColor = isActive 
-        ? activeBg 
+    final borderColor = isActive
+        ? activeBg
         : (isDark ? Colors.white.withAlpha(60) : theme.dividerColor);
 
     return GestureDetector(
-      onTap: () {
-        _pageController.animateToPage(
-          index,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-        );
-      },
+      onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: AppLayout.space16, vertical: AppLayout.space4 + 2),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppLayout.space16,
+          vertical: AppLayout.space4 + 2,
+        ),
         decoration: BoxDecoration(
           color: isActive ? activeBg : inactiveBg,
           borderRadius: BorderRadius.circular(AppLayout.radius20),
@@ -473,8 +738,37 @@ class _PatientClinicalHistoryViewState extends State<PatientClinicalHistoryView>
       ),
     );
   }
+}
 
-  Widget _buildConsultationHistoryPage() {
+class ConsultationHistoryPage extends StatelessWidget {
+  final PatientHistoryResponse history;
+  final Set<String> selectedSessionIds;
+  final Set<String> selectedCabinIds;
+  final String? downloadingSessionId;
+  final Map<String, ConsultationLocation> sessionLocations;
+  final Future<void> Function() onRefreshHistory;
+  final Function(String sessionId) onToggleSessionSelection;
+  final Function(String sessionId) onDeleteSession;
+  final Function(Session session) onDownloadConsultationReport;
+
+  const ConsultationHistoryPage({
+    super.key,
+    required this.history,
+    required this.selectedSessionIds,
+    required this.selectedCabinIds,
+    this.downloadingSessionId,
+    required this.sessionLocations,
+    required this.onRefreshHistory,
+    required this.onToggleSessionSelection,
+    required this.onDeleteSession,
+    required this.onDownloadConsultationReport,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final selectionModeActive = selectedSessionIds.isNotEmpty || selectedCabinIds.isNotEmpty;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: AppLayout.space16),
       child: Column(
@@ -483,11 +777,11 @@ class _PatientClinicalHistoryViewState extends State<PatientClinicalHistoryView>
           RichText(
             text: TextSpan(
               text: "Consultation History  ",
-              style: Theme.of(context).textTheme.displaySmall,
+              style: theme.textTheme.displaySmall,
               children: [
                 TextSpan(
                   text: "${history.sessions.length}",
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppColors.textDisabled),
+                  style: theme.textTheme.bodyLarge?.copyWith(color: AppColors.textDisabled),
                 ),
               ],
             ),
@@ -495,7 +789,7 @@ class _PatientClinicalHistoryViewState extends State<PatientClinicalHistoryView>
           const SizedBox(height: AppLayout.space16),
           Expanded(
             child: CustomPullToRefresh(
-              onRefresh: _refreshHistory,
+              onRefresh: onRefreshHistory,
               child: history.sessions.isNotEmpty
                   ? ListView.builder(
                       padding: EdgeInsets.zero,
@@ -506,12 +800,12 @@ class _PatientClinicalHistoryViewState extends State<PatientClinicalHistoryView>
                           key: ValueKey(history.sessions[index].sessionId),
                           index: index,
                           patientHistory: history,
-                          isSelected: _selectedSessionIds.contains(history.sessions[index].sessionId),
-                          selectionModeActive: _selectedSessionIds.isNotEmpty || _selectedCabinIds.isNotEmpty,
-                          onSelect: () => _toggleSessionSelection(history.sessions[index].sessionId),
+                          isSelected: selectedSessionIds.contains(history.sessions[index].sessionId),
+                          selectionModeActive: selectionModeActive,
+                          onSelect: () => onToggleSessionSelection(history.sessions[index].sessionId),
                           isDownloading: downloadingSessionId == history.sessions[index].sessionId,
-                          onDelete: () => _deleteSession(history.sessions[index].sessionId),
-                          onDownload: (session) => downloadConsultationReport(session),
+                          onDelete: () => onDeleteSession(history.sessions[index].sessionId),
+                          onDownload: (session) => onDownloadConsultationReport(session),
                           title: getSpecialtyName(history.sessions[index].specialty ?? ""),
                           status: getDiagnosisStatus(history.sessions[index].currentStage ?? ""),
                           date: parseServerDate(history.sessions[index].createdAt),
@@ -561,8 +855,31 @@ class _PatientClinicalHistoryViewState extends State<PatientClinicalHistoryView>
       ),
     );
   }
+}
 
-  Widget _buildCabinHistoryPage() {
+class CabinHistoryPage extends StatelessWidget {
+  final PatientHistoryResponse history;
+  final Set<String> selectedSessionIds;
+  final Set<String> selectedCabinIds;
+  final Future<void> Function() onRefreshHistory;
+  final Function(String sessionId) onToggleCabinSelection;
+  final Function(String sessionId) onDeleteCabinSession;
+
+  const CabinHistoryPage({
+    super.key,
+    required this.history,
+    required this.selectedSessionIds,
+    required this.selectedCabinIds,
+    required this.onRefreshHistory,
+    required this.onToggleCabinSelection,
+    required this.onDeleteCabinSession,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final selectionModeActive = selectedSessionIds.isNotEmpty || selectedCabinIds.isNotEmpty;
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: AppLayout.space16),
       child: Column(
@@ -571,11 +888,11 @@ class _PatientClinicalHistoryViewState extends State<PatientClinicalHistoryView>
           RichText(
             text: TextSpan(
               text: "Cabin Sessions  ",
-              style: Theme.of(context).textTheme.displaySmall,
+              style: theme.textTheme.displaySmall,
               children: [
                 TextSpan(
                   text: "${history.cabinSessions.length}",
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: AppColors.textDisabled),
+                  style: theme.textTheme.bodyLarge?.copyWith(color: AppColors.textDisabled),
                 ),
               ],
             ),
@@ -583,7 +900,7 @@ class _PatientClinicalHistoryViewState extends State<PatientClinicalHistoryView>
           const SizedBox(height: AppLayout.space16),
           Expanded(
             child: CustomPullToRefresh(
-              onRefresh: _refreshHistory,
+              onRefresh: onRefreshHistory,
               child: history.cabinSessions.isNotEmpty
                   ? ListView.builder(
                       padding: EdgeInsets.zero,
@@ -595,10 +912,10 @@ class _PatientClinicalHistoryViewState extends State<PatientClinicalHistoryView>
                             key: ValueKey(history.cabinSessions[index].sessionId),
                             session: history.cabinSessions[index],
                             index: index,
-                            isSelected: _selectedCabinIds.contains(history.cabinSessions[index].sessionId),
-                            selectionModeActive: _selectedSessionIds.isNotEmpty || _selectedCabinIds.isNotEmpty,
-                            onSelect: () => _toggleCabinSelection(history.cabinSessions[index].sessionId),
-                            onDelete: () => _deleteCabinSession(history.cabinSessions[index].sessionId),
+                            isSelected: selectedCabinIds.contains(history.cabinSessions[index].sessionId),
+                            selectionModeActive: selectionModeActive,
+                            onSelect: () => onToggleCabinSelection(history.cabinSessions[index].sessionId),
+                            onDelete: () => onDeleteCabinSession(history.cabinSessions[index].sessionId),
                           ),
                         );
                       },
@@ -611,159 +928,6 @@ class _PatientClinicalHistoryViewState extends State<PatientClinicalHistoryView>
           ),
         ],
       ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: AppLayout.space16),
-                child: Material(
-                  borderRadius: BorderRadius.circular(AppLayout.radius16),
-                  color: theme.colorScheme.surface,
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppLayout.space16),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CustomNameInitial(name: history.patient.name, size: 60),
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(left: AppLayout.space8),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(history.patient.name,style: theme.textTheme.headlineMedium,maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,),
-                                Text("${history.patient.age} Yrs · ${history.patient.gender ?? ""}", style: theme.textTheme.bodyMedium,),
-                                const SizedBox(height: AppLayout.space8),
-                                Wrap(
-                                  spacing: AppLayout.space8,
-                                  children: [
-                                    PatientHistoryIconText(
-                                      icon: LucideIcons.calendar,
-                                      text: DateFormat('d MMM yy').format(
-                                        parseServerDate(history.patient.createdAt),
-                                      ),
-                                    ),
-                                    PatientHistoryIconText(
-                                      icon: LucideIcons.stethoscope,
-                                      text: '${history.sessions.length + history.cabinSessions.length} Sessions',
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppLayout.space16),
-
-              // Page Selector or Selection Bar
-              SizedBox(
-                height: 44,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
-                      child: (_selectedSessionIds.isNotEmpty || _selectedCabinIds.isNotEmpty)
-                          ? Container(
-                              key: const ValueKey('selection_bar'),
-                              padding: const EdgeInsets.symmetric(horizontal: AppLayout.space12, vertical: AppLayout.space8),
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.primaryContainer,
-                                borderRadius: BorderRadius.circular(AppLayout.radius20),
-                                border: Border.all(color: theme.colorScheme.primary, width: AppLayout.borderThin + 0.25),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  InkWell(
-                                    onTap: () => setState(() {
-                                      _selectedSessionIds.clear();
-                                      _selectedCabinIds.clear();
-                                    }),
-                                    child: Icon(Icons.close, size: AppLayout.iconSmall, color: theme.colorScheme.onSurface),
-                                  ),
-                                  const SizedBox(width: AppLayout.space8),
-                                  Text(
-                                    "${_selectedSessionIds.length + _selectedCabinIds.length} Selected",
-                                    style: TextStyle(
-                                      color: theme.colorScheme.onSurface,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                  const SizedBox(width: AppLayout.space16),
-                                  if (_isBulkDeleting)
-                                    const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: AppLayout.borderThick))
-                                  else
-                                    InkWell(
-                                      onTap: _deleteSelectedSessions,
-                                      child: const Icon(LucideIcons.trash2, color: AppColors.error, size: AppLayout.iconSmall),
-                                    ),
-                                ],
-                              ),
-                            )
-                          : Row(
-                                key: const ValueKey('page_selector'),
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  _buildPageIndicator(0, "History", LucideIcons.history),
-                                  const SizedBox(width: AppLayout.space16),
-                                  _buildPageIndicator(1, "Cabin", LucideIcons.monitor),
-                                  if (MediaQuery.of(context).size.width > 800) ...[
-                                    const SizedBox(width: AppLayout.space16),
-                                    InkWell(
-                                      onTap: _showConsultationTypeDialog,
-                                      child: Container(
-                                        padding: const EdgeInsets.all(AppLayout.space8),
-                                        decoration: BoxDecoration(
-                                          color: theme.colorScheme.primary,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Icon(Icons.add, color: theme.colorScheme.onPrimary, size: AppLayout.iconSmall),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: AppLayout.space16),
-
-              Expanded(
-                child: PageView(
-                  controller: _pageController,
-                  onPageChanged: (index) {
-                    setState(() {
-                      _currentPage = index;
-                    });
-                  },
-                  children: [
-                    _buildConsultationHistoryPage(),
-                    _buildCabinHistoryPage(),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
     );
   }
 }

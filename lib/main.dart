@@ -1,6 +1,7 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:clinical_ai_app/Components/layout_constants.dart';
 import 'package:clinical_ai_app/Screens/Authentication/login_screen.dart';
+import 'package:device_preview/device_preview.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
@@ -42,22 +43,18 @@ Future<void> main() async {
     ),
   );
   runApp(
-    /*DevicePreview(
+    DevicePreview(
       enabled: true,
       tools: const [
         ...DevicePreview.defaultTools,
       ],
-      builder: (context) => ChangeNotifierProvider(
-        create: (_) => PatientListProvider(),
-        child: const MyApp(),
-      ),
-    ),*/
-    ProviderScope(
+      builder: (context) => ProviderScope(
       child: ChangeNotifierProvider(
         create: (_) => PatientListProvider(),
         child: const MyApp(),
       ),
-    ),
+    ),)
+
   );
 }
 

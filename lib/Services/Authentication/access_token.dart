@@ -106,6 +106,25 @@ class AccessTokenService {
     );
   }
 
+  static Future<void> saveKioskToken(String kioskToken) async {
+    await _storage.write(
+      key: "kiosk_token",
+      value: kioskToken,
+    );
+  }
+
+  static Future<String?> getKioskToken() async {
+    return await _storage.read(
+      key: "kiosk_token",
+    );
+  }
+
+  static Future<void> deleteKioskToken() async {
+    await _storage.delete(
+      key: "kiosk_token",
+    );
+  }
+
   static Future<void> clear() async {
     await _storage.deleteAll();
   }

@@ -239,23 +239,22 @@ class KioskResultScreen extends ConsumerWidget {
                           ],
                         ),
                         const SizedBox(height: AppLayout.space16),
-                        _buildDetailRow(context, "Name", patient.name ?? "N/A"),
+                        ResultDetailRow(label: "Name", value: patient.name ?? "N/A"),
                         if (patient.patientId != null)
-                          _buildDetailRow(context, "Patient ID", patient.patientId!),
+                          ResultDetailRow(label: "Patient ID", value: patient.patientId!),
                         if (patient.phone != null)
-                          _buildDetailRow(context, "Phone", patient.phone!),
+                          ResultDetailRow(label: "Phone", value: patient.phone!),
                         if (patient.gender != null || patient.age != null)
-                          _buildDetailRow(
-                            context,
-                            "Demographics",
-                            "${patient.gender ?? ''}${patient.gender != null && patient.age != null ? ' / ' : ''}${patient.age != null ? '${patient.age} yrs' : ''}",
+                          ResultDetailRow(
+                            label: "Demographics",
+                            value: "${patient.gender ?? ''}${patient.gender != null && patient.age != null ? ' / ' : ''}${patient.age != null ? '${patient.age} yrs' : ''}",
                           ),
                         if (patient.guardianName != null && patient.guardianName!.isNotEmpty)
-                          _buildDetailRow(context, "Guardian", patient.guardianName!),
+                          ResultDetailRow(label: "Guardian", value: patient.guardianName!),
                         if (patient.address != null && patient.address!.isNotEmpty)
-                          _buildDetailRow(context, "Address", patient.address!),
+                          ResultDetailRow(label: "Address", value: patient.address!),
                         if (patient.caste != null && patient.caste!.isNotEmpty)
-                          _buildDetailRow(context, "Category/Caste", patient.caste!),
+                          ResultDetailRow(label: "Category/Caste", value: patient.caste!),
                       ],
                     ),
                   ),
@@ -397,8 +396,20 @@ class KioskResultScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  Widget _buildDetailRow(BuildContext context, String label, String value) {
+class ResultDetailRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const ResultDetailRow({
+    super.key,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: AppLayout.space8),

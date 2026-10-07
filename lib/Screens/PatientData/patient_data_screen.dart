@@ -6,6 +6,7 @@ import '../../Components/colors.dart';
 import 'patient_history_view.dart';
 import '../Consultation/new_consultation_screen.dart';
 import '../Consultation/new_cabin_consultation_screen.dart';
+import '../Consultation/audio_recording_screen.dart';
 
 class PatientDataScreen extends StatefulWidget {
   const PatientDataScreen({super.key, required this.patientHistory});
@@ -38,7 +39,7 @@ class _PatientDataScreenState extends State<PatientDataScreen> {
   void _showConsultationTypeDialog() {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     final primaryIconColor = isDark ? Colors.white : theme.colorScheme.primary;
     final warningIconColor = isDark ? Colors.white : AppColors.warning;
 
@@ -95,6 +96,31 @@ class _PatientDataScreenState extends State<PatientDataScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (_) => NewCabinConsultationScreen(
+                      patientId: history.patient.patientId,
+                      patientName: history.patient.name,
+                    ),
+                  ),
+                );
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(AppLayout.space8),
+                decoration: BoxDecoration(
+                  color: isDark ? theme.colorScheme.secondary.withAlpha(120) : theme.colorScheme.secondary.withAlpha(40),
+                  borderRadius: BorderRadius.circular(AppLayout.radius8),
+                ),
+                child: Icon(LucideIcons.mic, color: primaryIconColor, size: AppLayout.iconMedium),
+              ),
+              title: const Text("Audio Recording"),
+              subtitle: const Text("Record audio consultation session"),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => AudioRecordingScreen(
                       patientId: history.patient.patientId,
                       patientName: history.patient.name,
                     ),

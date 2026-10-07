@@ -31,6 +31,22 @@ class KioskService {
     return KioskConfig.fromJson(jsonDecode(response.body));
   }
 
+  /// Verify if a stored kioskToken is valid/authorized
+  static Future<bool> verifyKioskToken({
+    required String slug,
+    required String kioskToken,
+  }) async {
+    try {
+      final response = await http.get(
+        Uri.parse("$baseUrl/api/v2/t/$slug/config"),
+        headers: {"Authorization": "Bearer $kioskToken"},
+      );
+      return response.statusCode < 400;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// POST /api/v2/t/{slug}/unlock
   static Future<KioskUnlockResult> unlockKiosk({
     required String slug,

@@ -17,6 +17,7 @@ import '../../Services/Authentication/navigation_service.dart';
 import '../../Services/PatientData/patient_service.dart';
 import 'patient_data_screen.dart';
 import 'patient_history_view.dart';
+import '../Authentication/selection_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -150,120 +151,191 @@ class _HomeScreenState extends State<HomeScreen> {
         .toList();
 
     return Scaffold(
-      appBar: _buildAppBar(),
+      appBar: HomeAppBar(
+        userName: _userName,
+        onHomePressed: () {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            SelectionScreen.routeName,
+            (route) => false,
+          );
+        },
+        onLogoutPressed: () async {
+          showCustomConfirmationAlert(
+            detail: "Do you want to Logout?",
+            confirmText: "Logout",
+            loadingText: "Logging out...",
+            context: context,
+            onPressed: () async {
+              await AccessTokenService.clear();
+              logout();
+            },
+          );
+        },
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => showNewPatientDialog(context),
         child: const Icon(Icons.person_add_alt_1_rounded),
       ),
-      body: _isInitialLoading 
+      body: _isInitialLoading
           ? const HomeSkeleton()
           : LayoutBuilder(
               builder: (context, constraints) {
-          bool isTablet = constraints.maxWidth > 800;
+                bool isTablet = constraints.maxWidth > 800;
 
-          if (isTablet) {
-            return Padding(
-              padding: AppLayout.screenPaddingTab,
-              child: Row(
-                children: [
-                  // 1/3 Master Panel (List)
-                  Expanded(
-                    flex: 1,
-                    child: _buildFloatingPanel(
-                      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-                      child: _buildPatientList(filteredPatientList, patientList, isTablet),
-                    ),
-                  ),
-                  const SizedBox(width: AppLayout.space24), // Space between panels
-                  // 2/3 Detail Panel
-                  Expanded(
-                    flex: 2,
-                    child: _buildFloatingPanel(
-                      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-                      child: Stack(
-                        children: [
-                          _buildDetailContent(),
-                          if (_selectedHistory != null || _isLoadingHistory)
-                            Positioned(
-                              top: AppLayout.space12,
-                              right: AppLayout.space12,
-                              child: Material(
-                                color: Theme.of(context).colorScheme.surface.withAlpha(200),
-                                shape: const CircleBorder(),
-                                child: IconButton(
-                                  onPressed: () {
-                                    setState(() {
-                                      _selectedPatient = null;
-                                      _selectedHistory = null;
-                                      _isLoadingHistory = false;
-                                    });
-                                  },
-                                  icon: Icon(Icons.close, size: AppLayout.iconMedium, color: Theme.of(context).colorScheme.onSurface),
-                                  constraints: const BoxConstraints(),
-                                  padding: const EdgeInsets.all(AppLayout.space8),
-                                ),
-                              ),
+                if (isTablet) {
+                  return Padding(
+                    padding: AppLayout.screenPaddingTab,
+                    child: Row(
+                      children: [
+                        // 1/3 Master Panel (List)
+                        Expanded(
+                          flex: 1,
+                          child: FloatingPanel(
+                            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                            child: PatientListSection(
+                              searchController: searchController,
+                              filtered: filteredPatientList,
+                              full: patientList,
+                              isTablet: isTablet,
+                              selectedPatient: _selectedPatient,
+                              isLoadingHistory: _isLoadingHistory,
+                              onSearchChanged: (_) => setState(() {}),
+                              onRefresh: _refreshPatients,
+                              onPatientSelected: _handlePatientSelection,
                             ),
-                        ],
-                      ),
+                          ),
+                        ),
+                        const SizedBox(width: AppLayout.space24),
+                        // 2/3 Detail Panel
+                        Expanded(
+                          flex: 2,
+                          child: FloatingPanel(
+                            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                            child: Stack(
+                              children: [
+                                PatientDetailPanelContent(
+                                  isLoadingHistory: _isLoadingHistory,
+                                  selectedHistory: _selectedHistory,
+                                ),
+                                if (_selectedHistory != null || _isLoadingHistory)
+                                  Positioned(
+                                    top: AppLayout.space12,
+                                    right: AppLayout.space12,
+                                    child: Material(
+                                      color: Theme.of(context).colorScheme.surface.withAlpha(200),
+                                      shape: const CircleBorder(),
+                                      child: IconButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            _selectedPatient = null;
+                                            _selectedHistory = null;
+                                            _isLoadingHistory = false;
+                                          });
+                                        },
+                                        icon: Icon(
+                                          Icons.close,
+                                          size: AppLayout.iconMedium,
+                                          color: Theme.of(context).colorScheme.onSurface,
+                                        ),
+                                        constraints: const BoxConstraints(),
+                                        padding: const EdgeInsets.all(AppLayout.space8),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
-              ),
-            );
-          }
+                  );
+                }
 
-          // Mobile View
-          return Padding(
-            padding: AppLayout.screenPadding,
-            child: _buildPatientList(filteredPatientList, patientList, isTablet),
-          );
-        },
-      ),
+                // Mobile View
+                return Padding(
+                  padding: AppLayout.screenPadding,
+                  child: PatientListSection(
+                    searchController: searchController,
+                    filtered: filteredPatientList,
+                    full: patientList,
+                    isTablet: isTablet,
+                    selectedPatient: _selectedPatient,
+                    isLoadingHistory: _isLoadingHistory,
+                    onSearchChanged: (_) => setState(() {}),
+                    onRefresh: _refreshPatients,
+                    onPatientSelected: _handlePatientSelection,
+                  ),
+                );
+              },
+            ),
     );
   }
+}
 
-  PreferredSizeWidget _buildAppBar() {
+class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
+  final String? userName;
+  final VoidCallback onHomePressed;
+  final VoidCallback onLogoutPressed;
+
+  const HomeAppBar({
+    super.key,
+    this.userName,
+    required this.onHomePressed,
+    required this.onLogoutPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return AppBar(
       leading: Padding(
         padding: const EdgeInsets.only(left: AppLayout.space16),
         child: Image.asset("assets/kuvaka_logo.png"),
       ),
       actions: [
-        if (_userName != null)
+        IconButton(
+          icon: Icon(LucideIcons.home, color: theme.colorScheme.onSurface),
+          tooltip: "Return to Mode Selection",
+          onPressed: onHomePressed,
+        ),
+        if (userName != null)
           Center(
             child: Padding(
               padding: const EdgeInsets.only(right: AppLayout.space8),
               child: Text(
-                "Logged in: $_userName",
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-
-                      fontStyle: FontStyle.italic
-                    ),
+                "Logged in: $userName",
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  fontStyle: FontStyle.italic,
+                ),
               ),
             ),
           ),
         IconButton(
-          onPressed: () async {
-            showCustomConfirmationAlert(
-              detail: "Do you want to Logout?",
-              confirmText: "Logout",
-              loadingText: "Logging out...",
-              context: context,
-              onPressed: () async {
-                await AccessTokenService.clear();
-                logout();
-              },
-            );
-          },
-          icon: Icon(LucideIcons.logOut, color: Theme.of(context).colorScheme.onSurface),
+          onPressed: onLogoutPressed,
+          icon: Icon(LucideIcons.logOut, color: theme.colorScheme.onSurface),
         ),
       ],
     );
   }
 
-  Widget _buildFloatingPanel({required Widget child, Color? backgroundColor}) {
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+}
+
+class FloatingPanel extends StatelessWidget {
+  final Widget child;
+  final Color? backgroundColor;
+
+  const FloatingPanel({
+    super.key,
+    required this.child,
+    this.backgroundColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
       decoration: BoxDecoration(
@@ -281,8 +353,35 @@ class _HomeScreenState extends State<HomeScreen> {
       child: child,
     );
   }
+}
 
-  Widget _buildPatientList(List<Patient> filtered, List<Patient> full, bool isTablet) {
+class PatientListSection extends StatelessWidget {
+  final TextEditingController searchController;
+  final List<Patient> filtered;
+  final List<Patient> full;
+  final bool isTablet;
+  final Patient? selectedPatient;
+  final bool isLoadingHistory;
+  final ValueChanged<String> onSearchChanged;
+  final Future<void> Function() onRefresh;
+  final Function(Patient patient, bool isTablet) onPatientSelected;
+
+  const PatientListSection({
+    super.key,
+    required this.searchController,
+    required this.filtered,
+    required this.full,
+    required this.isTablet,
+    this.selectedPatient,
+    required this.isLoadingHistory,
+    required this.onSearchChanged,
+    required this.onRefresh,
+    required this.onPatientSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -294,11 +393,11 @@ class _HomeScreenState extends State<HomeScreen> {
               RichText(
                 text: TextSpan(
                   text: "Patients  ",
-                  style: Theme.of(context).textTheme.headlineLarge,
+                  style: theme.textTheme.headlineLarge,
                   children: [
                     TextSpan(
                       text: "${full.length}",
-                      style: Theme.of(context).textTheme.headlineSmall,
+                      style: theme.textTheme.headlineSmall,
                     ),
                   ],
                 ),
@@ -306,19 +405,19 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: AppLayout.space8),
               Text(
                 "Manage your patient records",
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).textTheme.bodyMedium?.color,
-                    ),
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.textTheme.bodyMedium?.color,
+                ),
               ),
               const SizedBox(height: AppLayout.space16),
               TextField(
                 controller: searchController,
-                onChanged: (value) => setState(() {}),
+                onChanged: onSearchChanged,
                 decoration: InputDecoration(
-                  fillColor: Theme.of(context).colorScheme.surface,
+                  fillColor: theme.colorScheme.surface,
                   prefixIcon: Icon(
                     Icons.search,
-                    color: Theme.of(context).colorScheme.onSurface,
+                    color: theme.colorScheme.onSurface,
                   ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(AppLayout.inputRadius),
@@ -333,7 +432,7 @@ class _HomeScreenState extends State<HomeScreen> {
         const SizedBox(height: AppLayout.space16),
         Expanded(
           child: CustomPullToRefresh(
-            onRefresh: _refreshPatients,
+            onRefresh: onRefresh,
             child: filtered.isNotEmpty
                 ? ListView.builder(
                     padding: EdgeInsets.only(
@@ -348,9 +447,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         padding: const EdgeInsets.only(bottom: AppLayout.space12),
                         child: CustomPatientBubble(
                           patient: patient,
-                          isSelected: isTablet && _selectedPatient?.patientId == patient.patientId,
-                          isLoading: !isTablet && _isLoadingHistory && _selectedPatient?.patientId == patient.patientId,
-                          onTap: () => _handlePatientSelection(patient, isTablet),
+                          isSelected: isTablet && selectedPatient?.patientId == patient.patientId,
+                          isLoading: !isTablet && isLoadingHistory && selectedPatient?.patientId == patient.patientId,
+                          onTap: () => onPatientSelected(patient, isTablet),
                         ),
                       );
                     },
@@ -362,7 +461,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Center(
                         child: Text(
                           full.isNotEmpty ? "No results found" : "No patient records",
-                          style: Theme.of(context).textTheme.bodyLarge,
+                          style: theme.textTheme.bodyLarge,
                         ),
                       ),
                     ),
@@ -372,21 +471,33 @@ class _HomeScreenState extends State<HomeScreen> {
       ],
     );
   }
+}
 
-  Widget _buildDetailContent() {
-    if (_isLoadingHistory) {
+class PatientDetailPanelContent extends StatelessWidget {
+  final bool isLoadingHistory;
+  final PatientHistoryResponse? selectedHistory;
+
+  const PatientDetailPanelContent({
+    super.key,
+    required this.isLoadingHistory,
+    this.selectedHistory,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoadingHistory) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_selectedHistory == null) {
-      return const SizedBox.expand(); // Blank black space if background is black
+    if (selectedHistory == null) {
+      return const SizedBox.expand();
     }
 
     return Padding(
       padding: const EdgeInsets.all(AppLayout.space24),
       child: PatientClinicalHistoryView(
-        key: ValueKey(_selectedHistory!.patient.patientId),
-        patientHistory: _selectedHistory!,
+        key: ValueKey(selectedHistory!.patient.patientId),
+        patientHistory: selectedHistory!,
       ),
     );
   }
@@ -413,7 +524,7 @@ class CustomPatientBubble extends StatelessWidget {
       color: isSelected ? theme.colorScheme.primaryContainer : theme.colorScheme.surface,
       borderRadius: BorderRadius.circular(AppLayout.cardRadius),
       child: InkWell(
-        onTap: isLoading==false? onTap: null,
+        onTap: isLoading == false ? onTap : null,
         splashColor: theme.colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(AppLayout.cardRadius),
         child: AnimatedContainer(
@@ -438,9 +549,16 @@ class CustomPatientBubble extends StatelessWidget {
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(toTitleCase(patient.name),style: theme.textTheme.bodyLarge,maxLines: 1,
-                        overflow: TextOverflow.ellipsis,),
-                          Text("${patient.age} Yrs · ${patient.gender ?? ""}", style: theme.textTheme.bodyMedium,)
+                          Text(
+                            toTitleCase(patient.name),
+                            style: theme.textTheme.bodyLarge,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            "${patient.age} Yrs · ${patient.gender ?? ""}",
+                            style: theme.textTheme.bodyMedium,
+                          )
                         ],
                       ),
                     ),
@@ -493,7 +611,6 @@ class GenderLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primary = gender.primaryColor;
-    // Adjust colors for dark mode to maintain legibility
     final background = isDark ? primary.withAlpha(40) : gender.secondaryColor;
     final borderColor = isDark ? primary.withAlpha(100) : primary;
     final textColor = isDark ? Color.lerp(primary, Colors.white, 0.4) : primary;
