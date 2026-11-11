@@ -1,0 +1,208 @@
+{
+  "@@locale": "en",
+
+  "welcomeToKuvaka": "Welcome to Kuvaka",
+  "selectModeDescription": "Please select your mode to proceed with the consultation or management.",
+  "homeScreenConsultation": "Home Screen / Consultation",
+  "kioskTicketingFlow": "Kiosk Ticketing Flow",
+  "loadingKiosk": "Loading Kiosk...",
+  "signOut": "Sign Out",
+  "signingOut": "Signing out...",
+  "confirmSignOut": "Do you want to Sign Out?",
+
+  "welcomeTitle": "Smarter histories.\nBetter outcomes.",
+  "welcomeSubhead": "AI-powered medical history taking that helps you diagnose with confidence and document without the burden.",
+  "featureHistory": "Structured patient history in under 5 minutes",
+  "featureDiagnoses": "AI-generated differential diagnoses",
+  "featureSoap": "Instant SOAP note documentation",
+  "getStarted": "Get Started",
+
+  "loginTitle": "Welcome back.",
+  "signInDescription": "Sign in to your account to continue.",
+  "signIn": "Sign in",
+  "emailHint": "doctor@hospital.com",
+  "passwordHint": "••••••••",
+  "signingIn": "Signing in...",
+  "newHere": "New here?",
+  "createAnAccount": " Create an Account",
+
+  "createAccountTitle": "Create Your Account",
+  "createAccountDescription": "Start taking smarter clinical histories today.",
+  "createAccount": "Create Account",
+  "nameHint": "Dr. Priya Sharma",
+  "creatingAccount": "Creating Account...",
+  "alreadyHaveAccount": "Already have an Account?",
+
+  "unlockKiosk": "Unlock Kiosk",
+  "unlockKioskDescription": "Enter the 6-digit physical kiosk PIN to begin.",
+  "unlockingKiosk": "Unlocking Kiosk...",
+  "clear": "CLEAR",
+  "patientCheckIn": "Patient Check-In",
+  "stepProgress": "Step {step} of 4",
+  "@stepProgress": {
+    "placeholders": {
+      "step": {
+        "type": "int"
+      }
+    }
+  },
+  "enterPhoneNumber": "Enter Phone Number",
+  "phoneDescription": "We'll use this phone number to associate your consultation ticket.",
+  "phoneNumber": "Phone Number",
+  "phoneHint": "e.g. +91 98765 43210",
+  "selectVisitType": "Select Visit Type",
+  "visitTypeDescription": "Are you visiting for Outpatient (OPD) or Inpatient (IPD) consultation?",
+  "visitType": "Visit Type",
+  "opdOutpatient": "OPD (Outpatient)",
+  "ipdInpatient": "IPD (Inpatient)",
+  "selectPreferredLanguage": "Select Preferred Language",
+  "languageDescription": "Choose the language you prefer for the AI voice assistant.",
+  "preferredLanguage": "Preferred Language",
+  "hindi": "Hindi (HI)",
+  "english": "English (EN)",
+  "marathi": "Marathi (MR)",
+  "gujarati": "Gujarati (GU)",
+  "selectGender": "Select Gender",
+  "genderDescription": "Please select patient gender.",
+  "gender": "Gender",
+  "female": "Female",
+  "male": "Male",
+  "other": "Other",
+  "next": "Next",
+  "startConsultationSession": "Start Consultation Session",
+  "startingSession": "Starting Session...",
+  "backToPreviousStep": "Back to previous step",
+  "enterValidPin": "Please enter a valid PIN.",
+  "enterPhoneError": "Please enter phone number.",
+  "unlockFailedError": "Unlock failed: Invalid PIN or network error.",
+
+  "kioskConsultationTitle": "Kiosk Consultation ({sessionId})",
+  "@kioskConsultationTitle": {
+    "placeholders": {
+      "sessionId": {
+        "type": "String"
+      }
+    }
+  },
+  "aiMedicalAgent": "AI Medical Agent",
+  "consultationSummaryReady": "Consultation Summary Ready",
+  "noSummaryProvided": "No summary provided.",
+  "fetchingResult": "Fetching Result...",
+  "endSessionAndViewResult": "End Session & View Result",
+
+  "opdTicketAndResult": "OPD Ticket & Result",
+  "printModelToConsole": "Print Model to Console",
+  "hospitalOpdTicket": "Hospital OPD Ticket",
+  "ticketRegisteredSuccessfully": "Ticket Registered Successfully",
+  "dateLabel": "Date: {date}",
+  "@dateLabel": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "ticketNumber": "TICKET NUMBER",
+  "departmentCategory": "Department / Category: ",
+  "patientDetails": "Patient Details",
+  "consultationSummary": "Consultation Summary",
+  "clinicalAlertsAndFlags": "Clinical Alerts & Flags",
+  "finishAndReturnToKioskHome": "Finish & Return to Kiosk Home",
+  "nameLabel": "Name",
+  "patientIdLabel": "Patient ID",
+  "phoneLabel": "Phone",
+  "demographicsLabel": "Demographics",
+  "guardianLabel": "Guardian",
+  "addressLabel": "Address",
+  "categoryCasteLabel": "Category/Caste",
+
+  "patients": "Patients",
+  "managePatientRecords": "Manage your patient records",
+  "searchHint": "Search...",
+  "noResultsFound": "No results found",
+  "noPatientRecords": "No patient records",
+  "loggedInAs": "Logged in: {name}",
+  "@loggedInAs": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "confirmLogout": "Do you want to Logout?",
+  "logout": "Logout",
+  "loggingOut": "Logging out...",
+  "failedToFetchHistory": "Failed to fetch patient history.",
+
+  "startNewSession": "Start New Session",
+  "medicalConsultation": "Medical Consultation",
+  "standardAiAssistedHistory": "Standard AI-assisted history taking",
+  "cabinFlow": "Cabin Flow",
+  "doctorLedLiveConsultation": "Doctor-led live consultation",
+  "audioRecording": "Audio Recording",
+  "recordAudioSession": "Record audio consultation session",
+
+  "consultationHistory": "Consultation History",
+  "cabinSessions": "Cabin Sessions",
+  "historyTab": "History",
+  "cabinTab": "Cabin",
+  "noConsultationsYet": "No consultations yet",
+  "startFirstConsultationPrompt": "Start the first one using the button below.",
+  "deleteConsultationConfirm": "Do you want to delete this consultation?",
+  "deleting": "Deleting...",
+  "consultationDeletedSuccess": "Consultation deleted successfully",
+  "deleteCabinConfirm": "Do you want to delete this cabin consultation?",
+  "cabinDeletedSuccess": "Cabin consultation deleted successfully",
+  "deleteSelectedSessionsConfirm": "Delete {count} selected sessions?",
+  "@deleteSelectedSessionsConfirm": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectedCount": "{count} Selected",
+  "@selectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pdfSaved": "PDF saved",
+  "savedTo": "Saved to: {location}",
+  "@savedTo": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      }
+    }
+  },
+  "open": "OPEN",
+
+  "audioRecordingTitle": "Audio Recording - {patientName}",
+  "@audioRecordingTitle": {
+    "placeholders": {
+      "patientName": {
+        "type": "String"
+      }
+    }
+  },
+  "offlineModeBadge": "Offline Mode",
+  "onlineModeBadge": "Online Mode",
+  "offlineSyncNotice": "No internet connection. Recording will be saved locally and queued for auto-sync when back online.",
+  "onlineSyncNotice": "Connected to server. Recording will be processed immediately upon completion.",
+  "readyToRecord": "Ready to Record",
+  "recordingInProgress": "Recording Consultation...",
+  "recordingPaused": "Recording Paused",
+  "recordingComplete": "Recording Complete",
+  "tapToStartRecording": "Tap the microphone button to start recording the consultation session.",
+  "startRecording": "Start Recording",
+  "pauseRecording": "Pause",
+  "resumeRecording": "Resume",
+  "stopRecording": "Stop & Save",
+  "reRecord": "Re-record",
+  "uploadConsultationAudio": "Upload Consultation Audio",
+  "saveToQueue": "Save & Queue for Sync",
+  "processingAudio": "Processing Audio..."
+}

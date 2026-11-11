@@ -3,6 +3,7 @@ import 'package:clinical_ai_app/Screens/Authentication/login_screen.dart';
 import 'package:clinical_ai_app/Services/Authentication/auth_service.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:clinical_ai_app/l10n/app_localizations.dart';
 
 import '../../Custom Widgets/custom_button.dart';
 import '../../Custom Widgets/custom_text_field.dart';
@@ -89,9 +90,12 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     passwordController.dispose();
     super.dispose();
   }
+
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final patientsProvider = context.read<PatientListProvider>();
+
     return Scaffold(
       body: SafeArea(
         child: LayoutBuilder(
@@ -108,71 +112,78 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                 child: Container(
                   constraints: BoxConstraints(maxWidth: contentWidth),
                   padding: isTablet ? const EdgeInsets.all(AppLayout.space40) : EdgeInsets.zero,
-                  decoration: isTablet ? BoxDecoration(
-                    color: Theme.of(context).scaffoldBackgroundColor,
-                    borderRadius: BorderRadius.circular(AppLayout.panelRadius),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withAlpha(Theme.of(context).brightness == Brightness.light ? 15 : 40),
-                        blurRadius: 20,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                    border: Border.all(color: Theme.of(context).dividerColor, width: AppLayout.borderThin),
-                  ) : null,
+                  decoration: isTablet
+                      ? BoxDecoration(
+                          color: Theme.of(context).scaffoldBackgroundColor,
+                          borderRadius: BorderRadius.circular(AppLayout.panelRadius),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withAlpha(
+                                Theme.of(context).brightness == Brightness.light ? 15 : 40,
+                              ),
+                              blurRadius: 20,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                          border: Border.all(
+                            color: Theme.of(context).dividerColor,
+                            width: AppLayout.borderThin,
+                          ),
+                        )
+                      : null,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: isTablet ? CrossAxisAlignment.center : CrossAxisAlignment.start,
                     children: [
                       LogoAndText(width: isTablet ? 600 : constraints.maxWidth),
-                      
+
                       const SizedBox(height: AppLayout.space32),
-                      
+
                       Text(
-                        'Create Your Account',
+                        l10n.createAccountTitle,
                         style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                          fontSize: isTablet ? 36 : 28,
-                        ),
+                              fontSize: isTablet ? 36 : 28,
+                            ),
                         textAlign: isTablet ? TextAlign.center : TextAlign.left,
                       ),
-                      
+
                       const SizedBox(height: AppLayout.space8),
-                      
+
                       Text(
-                        'Start taking smarter clinical histories today.',
+                        l10n.createAccountDescription,
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Theme.of(context).textTheme.bodyMedium?.color,
-                          fontSize: isTablet ? 18 : 16,
-                        ),
+                              color: Theme.of(context).textTheme.bodyMedium?.color,
+                              fontSize: isTablet ? 18 : 16,
+                            ),
                         textAlign: isTablet ? TextAlign.center : TextAlign.left,
                       ),
-                      
+
                       const SizedBox(height: AppLayout.space32),
-                      
+
                       CustomTextField(
-                        hintText: 'Dr. Priya Sharma',
+                        hintText: l10n.nameHint,
                         controller: nameController,
                         fieldName: "Full Name",
                       ),
-                      
+
                       const SizedBox(height: AppLayout.space16),
-                      
+
                       CustomTextField(
-                        hintText: 'dr@hospital.com',
+                        hintText: l10n.emailHint,
                         controller: emailController,
                         fieldName: "Email Address",
                         keyboardType: TextInputType.emailAddress,
                       ),
-                      
+
                       const SizedBox(height: AppLayout.space16),
-                      
+
                       CustomTextField(
-                        hintText: 'Min. 8 characters',
+                        hintText: l10n.passwordHint,
                         controller: passwordController,
                         fieldName: 'Password',
                         obscureText: true,
                       ),
-                      
+
                       const SizedBox(height: AppLayout.space16),
 
                       if (errorMessage != null)
@@ -181,7 +192,11 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                           child: Center(
                             child: Text(
                               errorMessage!,
-                              style: const TextStyle(color: Colors.red, fontSize: 14, fontWeight: FontWeight.w600),
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
                               textAlign: TextAlign.center,
                             ),
                           ),
@@ -190,8 +205,8 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                         const SizedBox(height: AppLayout.space16),
 
                       CustomButton(
-                        text: 'Create Account',
-                        loadingText: 'Creating Account...',
+                        text: l10n.createAccount,
+                        loadingText: l10n.creatingAccount,
                         isPseudoDisabled: !_isFormValid,
                         onTap: () async {
                           if (!_isFormValid) {
@@ -202,18 +217,18 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                           setState(() {
                             errorMessage = null;
                           });
-                          
+
                           try {
                             var response = await createAccount(
                               name: nameController.text.trim(),
                               email: emailController.text.trim(),
                               password: passwordController.text,
                             );
-                            
+
                             if (response['access_token'] != null) {
                               PatientListProvider? patientList = await listPatients();
                               patientsProvider.setPatients(patientList.patients!);
-                              
+
                               if (!context.mounted) return;
                               navigatorKey.currentState?.pushNamedAndRemoveUntil(
                                 SelectionScreen.routeName,
@@ -221,30 +236,32 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                               );
                             } else {
                               setState(() {
-                                errorMessage = response['detail']?.toString() ?? "Registration failed";
+                                errorMessage =
+                                    response['detail']?.toString() ?? "Registration failed";
                               });
                             }
                           } catch (e) {
                             setState(() {
-                              errorMessage = "Connection error. Please check your internet or try again later.";
+                              errorMessage =
+                                  "Connection error. Please check your internet or try again later.";
                             });
                           }
                         },
                       ),
-                      
+
                       const SizedBox(height: 24),
-                      
+
                       Center(
                         child: RichText(
                           text: TextSpan(
-                            text: "Already have an Account?",
+                            text: l10n.alreadyHaveAccount,
                             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: Theme.of(context).textTheme.bodySmall?.color,
-                              fontSize: isTablet ? 16 : 14,
-                            ),
+                                  color: Theme.of(context).textTheme.bodySmall?.color,
+                                  fontSize: isTablet ? 16 : 14,
+                                ),
                             children: [
                               TextSpan(
-                                text: " Sign In",
+                                text: " ${l10n.signIn}",
                                 style: const TextStyle(
                                   color: AppColors.brand,
                                   decoration: TextDecoration.underline,

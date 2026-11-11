@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:clinical_ai_app/l10n/app_localizations.dart';
 import '../../Components/colors.dart';
 import '../../Components/layout_constants.dart';
 import '../../Custom%20Widgets/Patients/cabin_diagnosis_card.dart';
@@ -46,6 +47,7 @@ class PatientHistoryEmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: AppLayout.space48),
       alignment: Alignment.center,
@@ -77,12 +79,12 @@ class PatientHistoryEmptyState extends StatelessWidget {
           ),
           const SizedBox(height: AppLayout.space16),
           Text(
-            'No consultations yet',
+            l10n.noConsultationsYet,
             style: theme.textTheme.bodyLarge,
           ),
           const SizedBox(height: AppLayout.space4),
           Text(
-            'Start the first one using the button below.',
+            l10n.startFirstConsultationPrompt,
             style: theme.textTheme.bodyMedium,
           ),
         ],
@@ -185,10 +187,11 @@ class _PatientClinicalHistoryViewState extends State<PatientClinicalHistoryView>
   }
 
   Future<void> _deleteSession(String sessionId) async {
+    final l10n = AppLocalizations.of(context)!;
     showCustomConfirmationAlert(
-      detail: "Do you want to delete this consultation?",
+      detail: l10n.deleteConsultationConfirm,
       context: context,
-      loadingText: "Deleting...",
+      loadingText: l10n.deleting,
       onPressed: () async {
         try {
           String? token = await AccessTokenService.getToken();
@@ -198,7 +201,7 @@ class _PatientClinicalHistoryViewState extends State<PatientClinicalHistoryView>
           });
           await deleteConsultation(token: token, sessionId: sessionId);
           await ConsultationLocationService.removeForSession(sessionId);
-          _showMessage('Consultation deleted successfully');
+          _showMessage(l10n.consultationDeletedSuccess);
           _refreshHistory();
         } catch (e) {
           _showMessage('Failed to delete consultation', isError: true);
@@ -209,10 +212,11 @@ class _PatientClinicalHistoryViewState extends State<PatientClinicalHistoryView>
   }
 
   Future<void> _deleteCabinSession(String sessionId) async {
+    final l10n = AppLocalizations.of(context)!;
     showCustomConfirmationAlert(
-      detail: "Do you want to delete this cabin consultation?",
+      detail: l10n.deleteCabinConfirm,
       context: context,
-      loadingText: "Deleting...",
+      loadingText: l10n.deleting,
       onPressed: () async {
         try {
           setState(() {
@@ -220,7 +224,7 @@ class _PatientClinicalHistoryViewState extends State<PatientClinicalHistoryView>
             _selectedCabinIds.remove(sessionId);
           });
           await deleteCabinSession(sessionId);
-          _showMessage('Cabin consultation deleted successfully');
+          _showMessage(l10n.cabinDeletedSuccess);
           _refreshHistory();
         } catch (e) {
           _showMessage('Failed to delete cabin consultation', isError: true);
@@ -231,13 +235,14 @@ class _PatientClinicalHistoryViewState extends State<PatientClinicalHistoryView>
   }
 
   Future<void> _deleteSelectedSessions() async {
+    final l10n = AppLocalizations.of(context)!;
     final totalSelected = _selectedSessionIds.length + _selectedCabinIds.length;
     if (totalSelected == 0) return;
 
     showCustomConfirmationAlert(
-      detail: "Delete $totalSelected selected sessions?",
+      detail: l10n.deleteSelectedSessionsConfirm(totalSelected),
       context: context,
-      loadingText: "Deleting...",
+      loadingText: l10n.deleting,
       onPressed: () async {
         setState(() => _isBulkDeleting = true);
 
@@ -321,6 +326,7 @@ class _PatientClinicalHistoryViewState extends State<PatientClinicalHistoryView>
 
   void _showPdfSavedNotification(String filePath) {
     if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
     final fileName = filePath.split('/').last;
     final savedIn = filePath.contains('/storage/emulated/0/Download') ? 'Downloads folder' : 'App storage';
 
@@ -334,19 +340,19 @@ class _PatientClinicalHistoryViewState extends State<PatientClinicalHistoryView>
               children: [
                 const Icon(Icons.check_circle, color: AppColors.surface, size: 20),
                 const SizedBox(width: 8),
-                const Expanded(child: Text('PDF saved', style: TextStyle(fontWeight: FontWeight.bold))),
+                Expanded(child: Text(l10n.pdfSaved, style: const TextStyle(fontWeight: FontWeight.bold))),
               ],
             ),
             const SizedBox(height: 4),
             Text(fileName, style: const TextStyle(fontSize: 12)),
             const SizedBox(height: 2),
-            Text('Saved to: $savedIn', style: const TextStyle(fontSize: 10, color: AppColors.surface)),
+            Text(l10n.savedTo(savedIn), style: const TextStyle(fontSize: 10, color: AppColors.surface)),
           ],
         ),
         backgroundColor: AppColors.success,
         duration: const Duration(seconds: 6),
         action: SnackBarAction(
-          label: 'OPEN',
+          label: l10n.open,
           textColor: AppColors.surface,
           onPressed: () => OpenFile.open(filePath),
         ),
@@ -355,11 +361,12 @@ class _PatientClinicalHistoryViewState extends State<PatientClinicalHistoryView>
   }
 
   void _showConsultationTypeDialog() {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text("Start New Session"),
+        title: Text(l10n.startNewSession),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -372,8 +379,8 @@ class _PatientClinicalHistoryViewState extends State<PatientClinicalHistoryView>
                 ),
                 child: const Icon(LucideIcons.stethoscope, color: AppColors.brand, size: 20),
               ),
-              title: const Text("Medical Consultation"),
-              subtitle: const Text("Standard AI-assisted history taking"),
+              title: Text(l10n.medicalConsultation),
+              subtitle: Text(l10n.standardAiAssistedHistory),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -399,8 +406,8 @@ class _PatientClinicalHistoryViewState extends State<PatientClinicalHistoryView>
                 ),
                 child: const Icon(LucideIcons.monitor, color: AppColors.warning, size: 20),
               ),
-              title: const Text("Cabin Flow"),
-              subtitle: const Text("Doctor-led live consultation"),
+              title: Text(l10n.cabinFlow),
+              subtitle: Text(l10n.doctorLedLiveConsultation),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -424,8 +431,8 @@ class _PatientClinicalHistoryViewState extends State<PatientClinicalHistoryView>
                 ),
                 child: const Icon(LucideIcons.mic, color: AppColors.brand, size: 20),
               ),
-              title: const Text("Audio Recording"),
-              subtitle: const Text("Record audio consultation session"),
+              title: Text(l10n.audioRecording),
+              subtitle: Text(l10n.recordAudioSession),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -448,6 +455,8 @@ class _PatientClinicalHistoryViewState extends State<PatientClinicalHistoryView>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
     return Column(
       children: [
         Expanded(
@@ -547,7 +556,7 @@ class _PatientClinicalHistoryViewState extends State<PatientClinicalHistoryView>
                                   ),
                                   const SizedBox(width: AppLayout.space8),
                                   Text(
-                                    "${_selectedSessionIds.length + _selectedCabinIds.length} Selected",
+                                    l10n.selectedCount(_selectedSessionIds.length + _selectedCabinIds.length),
                                     style: TextStyle(
                                       color: theme.colorScheme.onSurface,
                                       fontWeight: FontWeight.bold,
@@ -581,7 +590,7 @@ class _PatientClinicalHistoryViewState extends State<PatientClinicalHistoryView>
                               children: [
                                 HistoryPageIndicator(
                                   index: 0,
-                                  label: "History",
+                                  label: l10n.historyTab,
                                   icon: LucideIcons.history,
                                   isActive: _currentPage == 0,
                                   onTap: () {
@@ -595,7 +604,7 @@ class _PatientClinicalHistoryViewState extends State<PatientClinicalHistoryView>
                                 const SizedBox(width: AppLayout.space16),
                                 HistoryPageIndicator(
                                   index: 1,
-                                  label: "Cabin",
+                                  label: l10n.cabinTab,
                                   icon: LucideIcons.monitor,
                                   isActive: _currentPage == 1,
                                   onTap: () {
@@ -767,6 +776,7 @@ class ConsultationHistoryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final selectionModeActive = selectedSessionIds.isNotEmpty || selectedCabinIds.isNotEmpty;
 
     return Container(
@@ -776,7 +786,7 @@ class ConsultationHistoryPage extends StatelessWidget {
         children: [
           RichText(
             text: TextSpan(
-              text: "Consultation History  ",
+              text: "${l10n.consultationHistory}  ",
               style: theme.textTheme.displaySmall,
               children: [
                 TextSpan(
@@ -878,6 +888,7 @@ class CabinHistoryPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final selectionModeActive = selectedSessionIds.isNotEmpty || selectedCabinIds.isNotEmpty;
 
     return Container(
@@ -887,7 +898,7 @@ class CabinHistoryPage extends StatelessWidget {
         children: [
           RichText(
             text: TextSpan(
-              text: "Cabin Sessions  ",
+              text: "${l10n.cabinSessions}  ",
               style: theme.textTheme.displaySmall,
               children: [
                 TextSpan(

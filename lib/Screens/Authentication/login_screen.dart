@@ -3,6 +3,7 @@ import 'package:clinical_ai_app/Services/Authentication/navigation_service.dart'
 import 'package:clinical_ai_app/Services/PatientData/patient_service.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:clinical_ai_app/l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 import '../../Components/layout_constants.dart';
 import '../../Custom Widgets/custom_button.dart';
@@ -43,12 +44,12 @@ class _LoginScreenState extends State<LoginScreen> {
   bool get _isFormValid {
     final email = emailController.text.trim();
     final password = passwordController.text;
-    
+
     // Basic email validation: something@something
-    final emailValid = email.contains('@') && 
-                       email.indexOf('@') > 0 && 
-                       email.indexOf('@') < email.length - 1;
-    
+    final emailValid = email.contains('@') &&
+        email.indexOf('@') > 0 &&
+        email.indexOf('@') < email.length - 1;
+
     return emailValid && password.isNotEmpty;
   }
 
@@ -83,7 +84,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final patientsProvider = context.read<PatientListProvider>();
+
     return Scaffold(
       body: SafeArea(
         child: LayoutBuilder(
@@ -100,18 +103,25 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Container(
                   constraints: BoxConstraints(maxWidth: contentWidth),
                   padding: isTablet ? const EdgeInsets.all(AppLayout.space40) : EdgeInsets.zero,
-                  decoration: isTablet ? BoxDecoration(
-                    color: Theme.of(context).scaffoldBackgroundColor,
-                    borderRadius: BorderRadius.circular(AppLayout.panelRadius),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withAlpha(Theme.of(context).brightness == Brightness.light ? 15 : 40),
-                        blurRadius: 20,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                    border: Border.all(color: Theme.of(context).dividerColor, width: AppLayout.borderThin),
-                  ) : null,
+                  decoration: isTablet
+                      ? BoxDecoration(
+                          color: Theme.of(context).scaffoldBackgroundColor,
+                          borderRadius: BorderRadius.circular(AppLayout.panelRadius),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withAlpha(
+                                Theme.of(context).brightness == Brightness.light ? 15 : 40,
+                              ),
+                              blurRadius: 20,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                          border: Border.all(
+                            color: Theme.of(context).dividerColor,
+                            width: AppLayout.borderThin,
+                          ),
+                        )
+                      : null,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: isTablet ? CrossAxisAlignment.center : CrossAxisAlignment.start,
@@ -121,28 +131,28 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: AppLayout.space32),
 
                       Text(
-                        'Welcome back.',
+                        l10n.loginTitle,
                         style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                          fontSize: isTablet ? 36 : 28,
-                        ),
+                              fontSize: isTablet ? 36 : 28,
+                            ),
                         textAlign: isTablet ? TextAlign.center : TextAlign.left,
                       ),
 
                       const SizedBox(height: AppLayout.space8),
 
                       Text(
-                        'Sign in to your account to continue.',
+                        l10n.signInDescription,
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Theme.of(context).textTheme.bodyMedium?.color,
-                          fontSize: isTablet ? 18 : 16,
-                        ),
+                              color: Theme.of(context).textTheme.bodyMedium?.color,
+                              fontSize: isTablet ? 18 : 16,
+                            ),
                         textAlign: isTablet ? TextAlign.center : TextAlign.left,
                       ),
 
                       const SizedBox(height: AppLayout.space32),
 
                       CustomTextField(
-                        hintText: 'doctor@hospital.com',
+                        hintText: l10n.emailHint,
                         controller: emailController,
                         fieldName: "Email Address",
                         keyboardType: TextInputType.emailAddress,
@@ -151,7 +161,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: AppLayout.space16),
 
                       CustomTextField(
-                        hintText: '••••••••',
+                        hintText: l10n.passwordHint,
                         controller: passwordController,
                         fieldName: 'Password',
                         obscureText: true,
@@ -165,7 +175,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: Center(
                             child: Text(
                               errorMessage!,
-                              style: const TextStyle(color: Colors.red, fontSize: 14, fontWeight: FontWeight.w600),
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
                               textAlign: TextAlign.center,
                             ),
                           ),
@@ -174,8 +188,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: AppLayout.space16),
 
                       CustomButton(
-                        text: 'Sign in',
-                        loadingText: 'Signing in...',
+                        text: l10n.signIn,
+                        loadingText: l10n.signingIn,
                         isPseudoDisabled: !_isFormValid,
                         onTap: () async {
                           if (!_isFormValid) {
@@ -208,7 +222,8 @@ class _LoginScreenState extends State<LoginScreen> {
                             }
                           } catch (e) {
                             setState(() {
-                              errorMessage = "Connection error. Please check your internet or try again later.";
+                              errorMessage =
+                                  "Connection error. Please check your internet or try again later.";
                             });
                           }
                         },
@@ -219,14 +234,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       Center(
                         child: RichText(
                           text: TextSpan(
-                            text: "New here?",
+                            text: l10n.newHere,
                             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: Theme.of(context).textTheme.bodySmall?.color,
-                              fontSize: isTablet ? 16 : 14,
-                            ),
+                                  color: Theme.of(context).textTheme.bodySmall?.color,
+                                  fontSize: isTablet ? 16 : 14,
+                                ),
                             children: [
                               TextSpan(
-                                text: " Create an Account",
+                                text: l10n.createAnAccount,
                                 style: const TextStyle(
                                   color: AppColors.brand,
                                   decoration: TextDecoration.underline,

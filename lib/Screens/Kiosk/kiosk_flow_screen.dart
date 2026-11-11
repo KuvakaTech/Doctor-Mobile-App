@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:clinical_ai_app/l10n/app_localizations.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:clinical_ai_app/Components/colors.dart';
 import 'package:clinical_ai_app/Components/layout_constants.dart';
@@ -170,9 +171,10 @@ class _KioskFlowScreenState extends State<KioskFlowScreen> {
   }
 
   Future<void> _unlockKiosk() async {
+    final l10n = AppLocalizations.of(context)!;
     final pin = _pinController.text.trim();
     if (pin.length < 4) {
-      setState(() => _errorMessage = "Please enter a valid PIN.");
+      setState(() => _errorMessage = l10n.enterValidPin);
       return;
     }
 
@@ -189,15 +191,16 @@ class _KioskFlowScreenState extends State<KioskFlowScreen> {
       });
     } catch (e) {
       setState(() {
-        _errorMessage = "Unlock failed: Invalid PIN or network error.";
+        _errorMessage = l10n.unlockFailedError;
       });
     }
   }
 
   Future<void> _startSession() async {
+    final l10n = AppLocalizations.of(context)!;
     final phone = _phoneController.text.trim();
     if (phone.isEmpty) {
-      setState(() => _errorMessage = "Please enter phone number.");
+      setState(() => _errorMessage = l10n.enterPhoneError);
       return;
     }
 
@@ -266,10 +269,11 @@ class _KioskFlowScreenState extends State<KioskFlowScreen> {
   }
 
   void _handleNextFormStep() {
+    final l10n = AppLocalizations.of(context)!;
     if (_formStep == 0) {
       final phone = _phoneController.text.trim();
       if (phone.isEmpty) {
-        setState(() => _errorMessage = "Please enter phone number.");
+        setState(() => _errorMessage = l10n.enterPhoneError);
         return;
       }
     }
@@ -288,9 +292,11 @@ class _KioskFlowScreenState extends State<KioskFlowScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Kiosk Ticketing Flow"),
+        title: Text(l10n.kioskTicketingFlow),
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
@@ -414,18 +420,19 @@ class KioskPinUnlockView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          "Unlock Kiosk",
+          l10n.unlockKiosk,
           style: theme.textTheme.headlineMedium,
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: AppLayout.space8),
         Text(
-          "Enter the 6-digit physical kiosk PIN to begin.",
+          l10n.unlockKioskDescription,
           style: theme.textTheme.bodyMedium,
           textAlign: TextAlign.center,
         ),
@@ -488,8 +495,8 @@ class KioskPinUnlockView extends StatelessWidget {
         const SizedBox(height: AppLayout.space24),
 
         CustomButton(
-          text: "Unlock Kiosk",
-          loadingText: "Unlocking Kiosk...",
+          text: l10n.unlockKiosk,
+          loadingText: l10n.unlockingKiosk,
           onTap: onUnlock,
         ),
       ],
@@ -510,6 +517,7 @@ class KioskNumpadRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -518,7 +526,7 @@ class KioskNumpadRow extends StatelessWidget {
           return KioskNumpadButton(
             onTap: () => onKeyTap('clear'),
             child: Text(
-              "CLEAR",
+              l10n.clear,
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
@@ -619,6 +627,7 @@ class KioskPatientFormView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final double progress = (formStep + 1) / 4;
 
     return Column(
@@ -629,7 +638,7 @@ class KioskPatientFormView extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              "Patient Check-In",
+              l10n.patientCheckIn,
               style: theme.textTheme.headlineMedium,
             ),
             Container(
@@ -642,7 +651,7 @@ class KioskPatientFormView extends StatelessWidget {
                 borderRadius: BorderRadius.circular(AppLayout.radius12),
               ),
               child: Text(
-                "Step ${formStep + 1} of 4",
+                l10n.stepProgress(formStep + 1),
                 style: theme.textTheme.labelMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: theme.colorScheme.primary,
@@ -689,13 +698,13 @@ class KioskPatientFormView extends StatelessWidget {
         // Action Buttons
         if (formStep < 3)
           CustomButton(
-            text: "Next",
+            text: l10n.next,
             onTap: onNextStep,
           )
         else
           CustomButton(
-            text: "Start Consultation Session",
-            loadingText: "Starting Session...",
+            text: l10n.startConsultationSession,
+            loadingText: l10n.startingSession,
             onTap: onStartSession,
           ),
 
@@ -704,7 +713,7 @@ class KioskPatientFormView extends StatelessWidget {
           TextButton.icon(
             onPressed: onPreviousStep,
             icon: const Icon(Icons.arrow_back, size: AppLayout.iconSmall + 2),
-            label: const Text("Back to previous step"),
+            label: Text(l10n.backToPreviousStep),
           ),
         ],
       ],
@@ -737,6 +746,7 @@ class KioskFormStepContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     switch (formStep) {
       case 0:
@@ -745,23 +755,23 @@ class KioskFormStepContent extends StatelessWidget {
           key: const ValueKey(0),
           children: [
             Text(
-              "Enter Phone Number",
+              l10n.enterPhoneNumber,
               style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: AppLayout.space8),
             Text(
-              "We'll use this phone number to associate your consultation ticket.",
+              l10n.phoneDescription,
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: AppLayout.space20),
-            const _FieldLabel(label: "Phone Number", required: true),
+            _FieldLabel(label: l10n.phoneNumber, required: true),
             const SizedBox(height: AppLayout.space8),
             TextField(
               controller: phoneController,
               keyboardType: TextInputType.phone,
               decoration: InputDecoration(
                 fillColor: theme.scaffoldBackgroundColor,
-                hintText: "e.g. +91 98765 43210",
+                hintText: l10n.phoneHint,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: AppLayout.space16,
                   vertical: AppLayout.space12 + 2,
@@ -777,16 +787,16 @@ class KioskFormStepContent extends StatelessWidget {
           key: const ValueKey(1),
           children: [
             Text(
-              "Select Visit Type",
+              l10n.selectVisitType,
               style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: AppLayout.space8),
             Text(
-              "Are you visiting for Outpatient (OPD) or Inpatient (IPD) consultation?",
+              l10n.visitTypeDescription,
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: AppLayout.space20),
-            const _FieldLabel(label: "Visit Type", required: true),
+            _FieldLabel(label: l10n.visitType, required: true),
             const SizedBox(height: AppLayout.space8),
             SizedBox(
               height: 52,
@@ -794,7 +804,7 @@ class KioskFormStepContent extends StatelessWidget {
                 children: [
                   Expanded(
                     child: SelectableOptionButton(
-                      label: "OPD (Outpatient)",
+                      label: l10n.opdOutpatient,
                       selected: visitType == 'opd',
                       onTap: () => onVisitTypeChanged('opd'),
                     ),
@@ -802,7 +812,7 @@ class KioskFormStepContent extends StatelessWidget {
                   const SizedBox(width: AppLayout.space12),
                   Expanded(
                     child: SelectableOptionButton(
-                      label: "IPD (Inpatient)",
+                      label: l10n.ipdInpatient,
                       selected: visitType == 'ipd',
                       onTap: () => onVisitTypeChanged('ipd'),
                     ),
@@ -819,16 +829,16 @@ class KioskFormStepContent extends StatelessWidget {
           key: const ValueKey(2),
           children: [
             Text(
-              "Select Preferred Language",
+              l10n.selectPreferredLanguage,
               style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: AppLayout.space8),
             Text(
-              "Choose the language you prefer for the AI voice assistant.",
+              l10n.languageDescription,
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: AppLayout.space20),
-            const _FieldLabel(label: "Preferred Language", required: true),
+            _FieldLabel(label: l10n.preferredLanguage, required: true),
             const SizedBox(height: AppLayout.space8),
             Column(
               children: [
@@ -836,7 +846,7 @@ class KioskFormStepContent extends StatelessWidget {
                   children: [
                     Expanded(
                       child: SelectableOptionButton(
-                        label: "Hindi (HI)",
+                        label: l10n.hindi,
                         selected: language == 'hi',
                         onTap: () => onLanguageChanged('hi'),
                       ),
@@ -844,7 +854,7 @@ class KioskFormStepContent extends StatelessWidget {
                     const SizedBox(width: AppLayout.space12),
                     Expanded(
                       child: SelectableOptionButton(
-                        label: "English (EN)",
+                        label: l10n.english,
                         selected: language == 'en',
                         onTap: () => onLanguageChanged('en'),
                       ),
@@ -856,7 +866,7 @@ class KioskFormStepContent extends StatelessWidget {
                   children: [
                     Expanded(
                       child: SelectableOptionButton(
-                        label: "Marathi (MR)",
+                        label: l10n.marathi,
                         selected: language == 'mr',
                         onTap: () => onLanguageChanged('mr'),
                       ),
@@ -864,7 +874,7 @@ class KioskFormStepContent extends StatelessWidget {
                     const SizedBox(width: AppLayout.space12),
                     Expanded(
                       child: SelectableOptionButton(
-                        label: "Gujarati (GU)",
+                        label: l10n.gujarati,
                         selected: language == 'gu',
                         onTap: () => onLanguageChanged('gu'),
                       ),
@@ -883,16 +893,16 @@ class KioskFormStepContent extends StatelessWidget {
           key: const ValueKey(3),
           children: [
             Text(
-              "Select Gender",
+              l10n.selectGender,
               style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: AppLayout.space8),
             Text(
-              "Please select patient gender.",
+              l10n.genderDescription,
               style: theme.textTheme.bodyMedium,
             ),
             const SizedBox(height: AppLayout.space20),
-            const _FieldLabel(label: "Gender", required: true),
+            _FieldLabel(label: l10n.gender, required: true),
             const SizedBox(height: AppLayout.space8),
             SizedBox(
               height: 52,
@@ -900,7 +910,7 @@ class KioskFormStepContent extends StatelessWidget {
                 children: [
                   Expanded(
                     child: SelectableOptionButton(
-                      label: "Female",
+                      label: l10n.female,
                       selected: gender == 'female',
                       onTap: () => onGenderChanged('female'),
                     ),
@@ -908,7 +918,7 @@ class KioskFormStepContent extends StatelessWidget {
                   const SizedBox(width: AppLayout.space12),
                   Expanded(
                     child: SelectableOptionButton(
-                      label: "Male",
+                      label: l10n.male,
                       selected: gender == 'male',
                       onTap: () => onGenderChanged('male'),
                     ),
@@ -916,7 +926,7 @@ class KioskFormStepContent extends StatelessWidget {
                   const SizedBox(width: AppLayout.space12),
                   Expanded(
                     child: SelectableOptionButton(
-                      label: "Other",
+                      label: l10n.other,
                       selected: gender == 'other',
                       onTap: () => onGenderChanged('other'),
                     ),

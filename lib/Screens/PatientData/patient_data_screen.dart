@@ -1,5 +1,6 @@
 import 'package:clinical_ai_app/Components/layout_constants.dart';
 import 'package:flutter/material.dart';
+import 'package:clinical_ai_app/l10n/app_localizations.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../Models/patient_response_history_model.dart';
 import '../../Components/colors.dart';
@@ -38,6 +39,7 @@ class _PatientDataScreenState extends State<PatientDataScreen> {
 
   void _showConsultationTypeDialog() {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final isDark = theme.brightness == Brightness.dark;
 
     final primaryIconColor = isDark ? Colors.white : theme.colorScheme.primary;
@@ -48,7 +50,7 @@ class _PatientDataScreenState extends State<PatientDataScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: theme.colorScheme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppLayout.radius16)),
-        title: const Text("Start New Session"),
+        title: Text(l10n.startNewSession),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -61,8 +63,8 @@ class _PatientDataScreenState extends State<PatientDataScreen> {
                 ),
                 child: Icon(LucideIcons.stethoscope, color: primaryIconColor, size: AppLayout.iconMedium),
               ),
-              title: const Text("Medical Consultation"),
-              subtitle: const Text("Standard AI-assisted history taking"),
+              title: Text(l10n.medicalConsultation),
+              subtitle: Text(l10n.standardAiAssistedHistory),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -88,8 +90,8 @@ class _PatientDataScreenState extends State<PatientDataScreen> {
                 ),
                 child: Icon(LucideIcons.monitor, color: warningIconColor, size: AppLayout.iconMedium),
               ),
-              title: const Text("Cabin Flow"),
-              subtitle: const Text("Doctor-led live consultation"),
+              title: Text(l10n.cabinFlow),
+              subtitle: Text(l10n.doctorLedLiveConsultation),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -113,8 +115,8 @@ class _PatientDataScreenState extends State<PatientDataScreen> {
                 ),
                 child: Icon(LucideIcons.mic, color: primaryIconColor, size: AppLayout.iconMedium),
               ),
-              title: const Text("Audio Recording"),
-              subtitle: const Text("Record audio consultation session"),
+              title: Text(l10n.audioRecording),
+              subtitle: Text(l10n.recordAudioSession),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(
@@ -136,6 +138,8 @@ class _PatientDataScreenState extends State<PatientDataScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         onPressed: _showConsultationTypeDialog,
@@ -151,14 +155,14 @@ class _PatientDataScreenState extends State<PatientDataScreen> {
                 children: [
                   const Icon(Icons.arrow_back),
                   Text(
-                    "Patients  /  ",
+                    "${l10n.patients}  /  ",
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],
               ),
             ),
             SizedBox(
-              width: MediaQuery.sizeOf(context).width/3,
+              width: MediaQuery.sizeOf(context).width / 3,
               child: Text(
                 history.patient.name,
                 overflow: TextOverflow.ellipsis,

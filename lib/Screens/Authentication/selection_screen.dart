@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:clinical_ai_app/l10n/app_localizations.dart';
 import 'package:clinical_ai_app/Components/layout_constants.dart';
 import 'package:clinical_ai_app/Custom Widgets/custom_button.dart';
 import 'package:clinical_ai_app/Custom Widgets/custom_confirmation_alert.dart';
@@ -8,16 +10,18 @@ import 'package:clinical_ai_app/Screens/PatientData/home_screen.dart';
 import 'package:clinical_ai_app/Screens/Kiosk/kiosk_flow_screen.dart';
 import 'package:clinical_ai_app/Services/Authentication/access_token.dart';
 import 'package:clinical_ai_app/Services/Authentication/navigation_service.dart';
+import 'package:clinical_ai_app/Services/Locale/locale_provider.dart';
 
 class SelectionScreen extends StatelessWidget {
   const SelectionScreen({super.key});
   static const routeName = "/selection";
 
   void _handleSignOut(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     showCustomConfirmationAlert(
-      detail: "Do you want to Sign Out?",
-      confirmText: "Sign Out",
-      loadingText: "Signing out...",
+      detail: l10n.confirmSignOut,
+      confirmText: l10n.signOut,
+      loadingText: l10n.signingOut,
       context: context,
       onPressed: () async {
         await AccessTokenService.clear();
@@ -28,15 +32,68 @@ class SelectionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: Icon(LucideIcons.logOut, color: Theme.of(context).colorScheme.onSurface),
-            tooltip: "Sign Out",
-            onPressed: () => _handleSignOut(context),
+          Padding(
+            padding: const EdgeInsets.only(right: AppLayout.space16),
+            child: Consumer(
+              builder: (context, ref, child) {
+                final currentLocale = ref.watch(localeProvider);
+                final currentCode = currentLocale?.languageCode ?? Localizations.localeOf(context).languageCode;
+
+                return PopupMenuButton<String>(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppLayout.radius12),
+                  ),
+                  icon: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppLayout.space12,
+                      vertical: AppLayout.space6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(AppLayout.radius20),
+                      border: Border.all(
+                        color: Theme.of(context).dividerColor,
+                        width: AppLayout.borderThin,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(LucideIcons.globe, size: 16),
+                        const SizedBox(width: 6),
+                        Text(
+                          currentCode == 'hi' ? 'हिंदी' : 'English',
+                          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        const Icon(Icons.arrow_drop_down, size: 18),
+                      ],
+                    ),
+                  ),
+                  onSelected: (code) {
+                    ref.read(localeProvider.notifier).setLocale(Locale(code));
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'en',
+                      child: Text('🇬🇧  English'),
+                    ),
+                    const PopupMenuItem(
+                      value: 'hi',
+                      child: Text('🇮🇳  हिंदी (Hindi)'),
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -83,7 +140,7 @@ class SelectionScreen extends StatelessWidget {
                       const SizedBox(height: AppLayout.space32),
 
                       Text(
-                        "Welcome to Kuvaka",
+                        l10n.welcomeToKuvaka,
                         style: Theme.of(context).textTheme.displayLarge?.copyWith(
                               fontSize: isTablet ? 36 : 28,
                             ),
@@ -93,7 +150,7 @@ class SelectionScreen extends StatelessWidget {
                       const SizedBox(height: AppLayout.space16),
 
                       Text(
-                        "Please select your mode to proceed with the consultation or management.",
+                        l10n.selectModeDescription,
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                               fontSize: isTablet ? 18 : 16,
                               height: 1.5,
@@ -104,7 +161,7 @@ class SelectionScreen extends StatelessWidget {
                       const SizedBox(height: AppLayout.space40),
 
                       CustomButton(
-                        text: 'Home Screen / Consultation',
+                        text: l10n.homeScreenConsultation,
                         onTap: () {
                           Navigator.pushNamedAndRemoveUntil(
                             context,
@@ -117,8 +174,8 @@ class SelectionScreen extends StatelessWidget {
                       const SizedBox(height: AppLayout.space16),
 
                       CustomButton(
-                        text: 'Kiosk Ticketing Flow',
-                        loadingText: 'Loading Kiosk...',
+                        text: l10n.kioskTicketingFlow,
+                        loadingText: l10n.loadingKiosk,
                         onTap: () async {
                           try {
                             final initData = await KioskFlowScreen.prepareKioskFlow();
@@ -150,9 +207,11 @@ class SelectionScreen extends StatelessWidget {
                         child: TextButton.icon(
                           onPressed: () => _handleSignOut(context),
                           icon: const Icon(LucideIcons.logOut, size: 18),
-                          label: const Text("Sign Out"),
+                          label: Text(l10n.signOut),
                           style: TextButton.styleFrom(
                             foregroundColor: Theme.of(context).colorScheme.error,
+                            backgroundColor: Colors.white,
+                            elevation: 50
                           ),
                         ),
                       ),

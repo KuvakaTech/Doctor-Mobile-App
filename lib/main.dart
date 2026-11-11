@@ -7,6 +7,8 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart'
     hide ChangeNotifierProvider;
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:clinical_ai_app/l10n/app_localizations.dart';
 import 'Components/app_theme.dart';
 import 'Custom Widgets/home_skeleton.dart';
 import 'Models/patient_list_model.dart';
@@ -19,6 +21,7 @@ import 'Screens/Kiosk/kiosk_flow_screen.dart';
 import 'Services/Authentication/auth_service.dart';
 import 'Services/Authentication/navigation_service.dart';
 import 'Services/Authentication/access_token.dart';
+import 'Services/Locale/locale_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -58,14 +61,14 @@ Future<void> main() async {
   );
 }
 
-class MyApp extends StatefulWidget {
+class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
   @override
-  State<MyApp> createState() => _MyAppState();
+  ConsumerState<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
@@ -102,12 +105,25 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final selectedLocale = ref.watch(localeProvider);
+
     return MaterialApp(
       navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
+      locale: selectedLocale,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('en'),
+        Locale('hi'),
+      ],
       initialRoute: AuthGate.routeName,
       routes: {
         CreateAccountScreen.routeName: (context) => CreateAccountScreen(),

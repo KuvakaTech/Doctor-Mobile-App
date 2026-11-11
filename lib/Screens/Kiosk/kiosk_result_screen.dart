@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:clinical_ai_app/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:clinical_ai_app/Components/colors.dart';
@@ -34,12 +35,13 @@ class KioskResultScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final patient = result.patient;
 
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: const Text("OPD Ticket & Result"),
+        title: Text(l10n.opdTicketAndResult),
         actions: [
           IconButton(
             icon: const Icon(LucideIcons.terminal),
@@ -95,7 +97,7 @@ class KioskResultScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: AppLayout.space12),
                     Text(
-                      result.hospitalName ?? "Hospital OPD Ticket",
+                      result.hospitalName ?? l10n.hospitalOpdTicket,
                       style: theme.textTheme.titleMedium?.copyWith(
                         color: theme.colorScheme.onPrimary.withAlpha(200),
                       ),
@@ -103,7 +105,7 @@ class KioskResultScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      "Ticket Registered Successfully",
+                      l10n.ticketRegisteredSuccessfully,
                       style: theme.textTheme.headlineSmall?.copyWith(
                         color: theme.colorScheme.onPrimary,
                         fontWeight: FontWeight.bold,
@@ -114,7 +116,7 @@ class KioskResultScreen extends ConsumerWidget {
                       const SizedBox(height: AppLayout.space8),
                       Chip(
                         label: Text(
-                          "Date: ${result.opdDateIst}",
+                          l10n.dateLabel(result.opdDateIst!),
                           style: TextStyle(
                             color: theme.colorScheme.primary,
                             fontWeight: FontWeight.bold,
@@ -147,7 +149,7 @@ class KioskResultScreen extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                "TICKET NUMBER",
+                                l10n.ticketNumber,
                                 style: theme.textTheme.labelMedium?.copyWith(
                                   color: theme.textTheme.bodySmall?.color,
                                   letterSpacing: 1.2,
@@ -192,7 +194,7 @@ class KioskResultScreen extends ConsumerWidget {
                             const Icon(LucideIcons.stethoscope, size: 18, color: AppColors.brand),
                             const SizedBox(width: 8),
                             Text(
-                              "Department / Category: ",
+                              l10n.departmentCategory,
                               style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
                             ),
                             Expanded(
@@ -229,32 +231,32 @@ class KioskResultScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          children: const [
-                            Icon(LucideIcons.user, color: AppColors.brand, size: 20),
-                            SizedBox(width: 8),
+                          children: [
+                            const Icon(LucideIcons.user, color: AppColors.brand, size: 20),
+                            const SizedBox(width: 8),
                             Text(
-                              "Patient Details",
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              l10n.patientDetails,
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
                         const SizedBox(height: AppLayout.space16),
-                        ResultDetailRow(label: "Name", value: patient.name ?? "N/A"),
+                        ResultDetailRow(label: l10n.nameLabel, value: patient.name ?? "N/A"),
                         if (patient.patientId != null)
-                          ResultDetailRow(label: "Patient ID", value: patient.patientId!),
+                          ResultDetailRow(label: l10n.patientIdLabel, value: patient.patientId!),
                         if (patient.phone != null)
-                          ResultDetailRow(label: "Phone", value: patient.phone!),
+                          ResultDetailRow(label: l10n.phoneLabel, value: patient.phone!),
                         if (patient.gender != null || patient.age != null)
                           ResultDetailRow(
-                            label: "Demographics",
+                            label: l10n.demographicsLabel,
                             value: "${patient.gender ?? ''}${patient.gender != null && patient.age != null ? ' / ' : ''}${patient.age != null ? '${patient.age} yrs' : ''}",
                           ),
                         if (patient.guardianName != null && patient.guardianName!.isNotEmpty)
-                          ResultDetailRow(label: "Guardian", value: patient.guardianName!),
+                          ResultDetailRow(label: l10n.guardianLabel, value: patient.guardianName!),
                         if (patient.address != null && patient.address!.isNotEmpty)
-                          ResultDetailRow(label: "Address", value: patient.address!),
+                          ResultDetailRow(label: l10n.addressLabel, value: patient.address!),
                         if (patient.caste != null && patient.caste!.isNotEmpty)
-                          ResultDetailRow(label: "Category/Caste", value: patient.caste!),
+                          ResultDetailRow(label: l10n.categoryCasteLabel, value: patient.caste!),
                       ],
                     ),
                   ),
@@ -276,12 +278,12 @@ class KioskResultScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          children: const [
-                            Icon(LucideIcons.fileText, color: AppColors.brand, size: 20),
-                            SizedBox(width: 8),
+                          children: [
+                            const Icon(LucideIcons.fileText, color: AppColors.brand, size: 20),
+                            const SizedBox(width: 8),
                             Text(
-                              "Consultation Summary",
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                              l10n.consultationSummary,
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
@@ -321,12 +323,12 @@ class KioskResultScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          children: const [
-                            Icon(LucideIcons.alertTriangle, color: AppColors.error, size: 20),
-                            SizedBox(width: 8),
+                          children: [
+                            const Icon(LucideIcons.alertTriangle, color: AppColors.error, size: 20),
+                            const SizedBox(width: 8),
                             Text(
-                              "Clinical Alerts & Flags",
-                              style: TextStyle(
+                              l10n.clinicalAlertsAndFlags,
+                              style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                                 color: AppColors.error,
@@ -376,12 +378,12 @@ class KioskResultScreen extends ConsumerWidget {
 
               // 6. Action Buttons
               CustomButton(
-                text: "Print Model to Console",
+                text: l10n.printModelToConsole,
                 onTap: () => _printModelToConsole(context),
               ),
               const SizedBox(height: AppLayout.space12),
               CustomButton(
-                text: "Finish & Return to Kiosk Home",
+                text: l10n.finishAndReturnToKioskHome,
                 onTap: () {
                   Navigator.pushNamedAndRemoveUntil(
                     context,

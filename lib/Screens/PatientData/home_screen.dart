@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:clinical_ai_app/l10n/app_localizations.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -73,6 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _handlePatientSelection(Patient patient, bool isTablet) async {
+    final l10n = AppLocalizations.of(context)!;
     if (!isTablet) {
       // Phone behavior: Show loader on card then navigate
       setState(() {
@@ -91,7 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
       } catch (e) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Failed to fetch patient history.")),
+          SnackBar(content: Text(l10n.failedToFetchHistory)),
         );
       } finally {
         if (mounted) {
@@ -122,7 +124,7 @@ class _HomeScreenState extends State<HomeScreen> {
         if (!mounted) return;
         setState(() => _isLoadingHistory = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Failed to fetch patient history.")),
+          SnackBar(content: Text(l10n.failedToFetchHistory)),
         );
       }
     }
@@ -140,6 +142,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final patientsProvider = context.watch<PatientListProvider>();
     final List<Patient> patientList = patientsProvider.patients ?? [];
     List<Patient> filteredPatientList = patientList
@@ -162,9 +165,9 @@ class _HomeScreenState extends State<HomeScreen> {
         },
         onLogoutPressed: () async {
           showCustomConfirmationAlert(
-            detail: "Do you want to Logout?",
-            confirmText: "Logout",
-            loadingText: "Logging out...",
+            detail: l10n.confirmLogout,
+            confirmText: l10n.logout,
+            loadingText: l10n.loggingOut,
             context: context,
             onPressed: () async {
               await AccessTokenService.clear();
@@ -288,6 +291,8 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
     return AppBar(
       leading: Padding(
         padding: const EdgeInsets.only(left: AppLayout.space16),
@@ -304,7 +309,7 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
             child: Padding(
               padding: const EdgeInsets.only(right: AppLayout.space8),
               child: Text(
-                "Logged in: $userName",
+                l10n.loggedInAs(userName!),
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   fontStyle: FontStyle.italic,
@@ -382,6 +387,8 @@ class PatientListSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -392,7 +399,7 @@ class PatientListSection extends StatelessWidget {
             children: [
               RichText(
                 text: TextSpan(
-                  text: "Patients  ",
+                  text: "${l10n.patients}  ",
                   style: theme.textTheme.headlineLarge,
                   children: [
                     TextSpan(
@@ -404,7 +411,7 @@ class PatientListSection extends StatelessWidget {
               ),
               const SizedBox(height: AppLayout.space8),
               Text(
-                "Manage your patient records",
+                l10n.managePatientRecords,
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: theme.textTheme.bodyMedium?.color,
                 ),
@@ -423,7 +430,7 @@ class PatientListSection extends StatelessWidget {
                     borderRadius: BorderRadius.circular(AppLayout.inputRadius),
                     borderSide: BorderSide.none,
                   ),
-                  hintText: "Search...",
+                  hintText: l10n.searchHint,
                 ),
               ),
             ],
@@ -460,7 +467,7 @@ class PatientListSection extends StatelessWidget {
                       height: MediaQuery.of(context).size.height * 0.4,
                       child: Center(
                         child: Text(
-                          full.isNotEmpty ? "No results found" : "No patient records",
+                          full.isNotEmpty ? l10n.noResultsFound : l10n.noPatientRecords,
                           style: theme.textTheme.bodyLarge,
                         ),
                       ),
